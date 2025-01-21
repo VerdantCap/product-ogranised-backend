@@ -123,6 +123,7 @@ class FileType(str, Enum):
 
 class BillingPlan(str, Enum):  
     STANDARD = 'standard'  
+    
 class ItemSpace(str, Enum):  
     INSURANCE = 'insurance'  
     HOUSEHOLD = 'household'  

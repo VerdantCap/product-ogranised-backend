@@ -15,16 +15,16 @@ from config import settings
 from utils.exceptions import OTPException
 
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.DEBUG)
 @backoff.on_exception(backoff.constant, ConnectionError, max_tries=8, interval=1)
 async def generate_verification_code(
     key: str,
-    redis_client: redis.StrictRedis,
+    redis_client: redis.Redis,
     expiry_minutes: int,
     length: int = 6,
 ) -> str:
     otp = "".join(random.choices(string.digits, k=length))
-
+    logger.info(redis_client)
     if redis_client is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -65,7 +65,7 @@ async def verify_otp(key: str, otp: str, redis_client: redis.StrictRedis) -> Non
         raise ConnectionError("Unable to delete OTP from Redis server")
 
 async def send_otp_email(email: str, otp: str) -> None:
-    subject = f"LeyLine: Verification Code {otp} - Action Required"
+    subject = f"Getorganised: Verification Code {otp} - Action Required"
     if email is None:
         raise HTTPException(
             status_code=400,

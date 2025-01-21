@@ -1,24 +1,22 @@
-from sqlalchemy import String, ForeignKey 
+from sqlalchemy import String, ForeignKey, DateTime 
 from sqlalchemy.orm import Mapped,mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime  
 from base import Base
-from enums import Itemspace
+from enums import ItemSpace
 from typing import List
 
 class Workspace(Base):  
     __tablename__ = "workspaces"  
     id: Mapped[str]= mapped_column(String, primary_key=True, index=True, nullable=False)  
-    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), ondelete="CASCADE", onupdate="CASCADE")  
-    cancelled_at: Mapped[datetime] = mapped_column(datetime, nullable=True)  
-    expires_at: Mapped[datetime] = mapped_column(datetime, nullable=True)  
+    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
+    cancelled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  
     spaces_order: Mapped[list]= mapped_column(JSONB)  # Using JSON to store arrays  
 
-    owner = relationship("User", back_populates="workspaces")  
-    tasks = relationship("Task", back_populates="workspace")  
-    events = relationship("Event", back_populates="workspace")  
-    files = relationship("File", back_populates="workspace")  
-    items = relationship("Item", back_populates="workspace")  
+    owner = relationship("User", back_populates="workspaces")
+    events = relationship("Event", back_populates="workspaces")
+    items = relationship("Item", back_populates="workspaces")  
 
     def has_active_subscription(self) -> bool:  
         return self.expires_at is None or self.on_grace_period()  

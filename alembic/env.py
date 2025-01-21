@@ -6,7 +6,7 @@ import os, sys
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))  
 sys.path.insert(0, base_dir)
 from alembic import context
-from src.models.user_model import Base
+from src.models import Base
 from src import database
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -42,7 +42,7 @@ def run_migrations_offline() -> None:
 
     """
     context.configure(
-        url=database.SQLALCHEMY_DATABASE_URL,
+        url=database.DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -60,7 +60,7 @@ def run_migrations_online() -> None:
 
     """
     connectable = create_engine(
-        database.SQLALCHEMY_DATABASE_URL,
+        database.DATABASE_URL,
         poolclass=pool.NullPool,
     )
 

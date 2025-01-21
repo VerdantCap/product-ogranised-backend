@@ -21,7 +21,6 @@ class BaseConfig(BaseSettings):
     REDIS_HOST: str = ""
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
-    REDIS_TLS: bool = True
     REDIS_PASSWORD: str = ""
     REDIS_CELERY_DB: int = 1
 
@@ -38,6 +37,7 @@ class BaseConfig(BaseSettings):
 
     SMTP_SERVER: str = ""
     SMTP_PORT: int = 0
+    
 
     # contact us stmp
     CONTACTUS_SMTP_FROM_EMAIL: str = ""
@@ -69,12 +69,11 @@ class DevelopConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URL: str = os.environ.get("SQLALCHEMY_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432")
     SQLALCHEMY_ECHO_SQL: bool = os.environ.get("SQLALCHEMY_ECHO_SQL", False)
 
-    REDIS_HOST: str = os.environ.get("REDIS_HOST", "")
-    REDIS_PORT: int = os.environ.get("REDIS_PORT", 6379)
+    REDIS_HOST: str = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT: int = os.environ.get("REDIS_PORT", 6380)
     REDIS_DB: int = 0
     REDIS_TLS: bool = True
     REDIS_PASSWORD: str = os.environ.get("REDIS_PASSWORD", "")
-    REDIS_CELERY_DB: int = 1
 
     STORAGE_ACCOUNT: str = os.environ.get("STORAGE_ACCOUNT", "")
     STORAGE_ACCOUNT_KEY: str = os.environ.get("STORAGE_ACCOUNT_KEY", "")
@@ -87,20 +86,20 @@ class DevelopConfig(BaseConfig):
     GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     REDIRECT_URL: str = os.environ.get("REDIRECT_URL", "")
 
-    SMTP_SERVER: str = os.environ.get("SMTP_SERVER", "")
-    SMTP_PORT: int = os.environ.get("SMTP_PORT", 0)
+    SMTP_SERVER: str = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_PORT: int = os.environ.get("SMTP_PORT", 587)
 
     # contact us stmp
-    CONTACTUS_SMTP_FROM_EMAIL: str = os.environ.get("CONTACTUS_SMTP_FROM_EMAIL", "")
-    CONTACTUS_SMTP_USERNAME: str = os.environ.get("CONTACTUS_SMTP_USERNAME", "")
-    CONTACTUS_SMTP_PASSWORD: str = os.environ.get("CONTACTUS_SMTP_PASSWORD", "")
+    # CONTACTUS_SMTP_FROM_EMAIL: str = os.environ.get("CONTACTUS_SMTP_FROM_EMAIL", "")
+    # CONTACTUS_SMTP_USERNAME: str = os.environ.get("CONTACTUS_SMTP_USERNAME", "alex@getorganised.ai")
+    # CONTACTUS_SMTP_PASSWORD: str = os.environ.get("CONTACTUS_SMTP_PASSWORD", "M@ther114")
 
     # verification stmp
     VERIFICATION_SMTP_FROM_EMAIL: str = os.environ.get(
-        "VERIFICATION_SMTP_FROM_EMAIL", ""
+        "VERIFICATION_SMTP_FROM_EMAIL", "support@getorganised.ai"
     )
-    VERIFICATION_SMTP_USERNAME: str = os.environ.get("VERIFICATION_SMTP_USERNAME", "")
-    VERIFICATION_SMTP_PASSWORD: str = os.environ.get("VERIFICATION_SMTP_PASSWORD", "")
+    VERIFICATION_SMTP_USERNAME: str = os.environ.get("VERIFICATION_SMTP_USERNAME", "bluxking06@gmail.com")
+    VERIFICATION_SMTP_PASSWORD: str = os.environ.get("VERIFICATION_SMTP_PASSWORD", "dhng khot tkst lzuc")
 
     # jwt
     JWT_SECRET: str = os.environ.get("JWT_SECRET", "your-secret-key")

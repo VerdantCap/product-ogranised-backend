@@ -63,7 +63,7 @@ class AuthService:
         user = User(
             email=create_user_in.email,
             password=create_user_in.password,
-            user_name=create_user_in.user_name,
+            name=create_user_in.name,
             id=user_id
         )
         self.auth_dao.create_user(user)
@@ -84,10 +84,6 @@ class AuthService:
             logger.warning("User not found")
             raise NotFoundException("User not found")
 
-        if not user.is_email_verified:
-            logger.warning("User not activated")
-            raise UserNotActivatedException("User not activated")
-
         if PasswordHashing.verify_password(
             password, user.password if user.password else ""
         ):
@@ -99,7 +95,7 @@ class AuthService:
     async def generate_access_token(self, user: User) -> str:
         profile = dict(
             avatar_url=user.avatar_url,
-            user_name=user.user_name,
+            name=user.name,
             country=user.country,
             city=user.city,
         )
@@ -205,7 +201,7 @@ class AuthService:
                 user = User(
                     email=profile_data["email"],
                     google_sub=profile_data["sub"],
-                    user_name=profile_data["name"],
+                    name=profile_data["name"],
                     avatar_url=profile_data["picture"],
                     is_subscribed=True,
                     is_email_verified=True,

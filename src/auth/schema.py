@@ -6,7 +6,7 @@ class CreateUserIn(BaseModel):
 
     email: str = Field(..., pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
     password: str = Field(..., min_length=8)
-    user_name: str = Field(..., max_length=100)
+    name: str = Field(..., max_length=100)
 
 class AccessToken(BaseModel):
     access_token: str
@@ -45,7 +45,7 @@ class ReplacePassword(BaseModel):
 class Profile(BaseModel):
     id: str
     unique_identifier: str
-    user_name: Optional[str] = None
+    name: Optional[str] = None
     introduction: Optional[str] = None
     industry: Optional[str] = None
     country: Optional[str] = None

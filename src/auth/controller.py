@@ -127,7 +127,7 @@ async def logout_controller() -> JSONResponse:
 async def verify_user_email_controller(
     user_id: str,
     email: str,
-    redis_client: redis.StrictRedis = Depends(redis_context),
+    redis_client: redis.Redis = Depends(redis_context),
 ) -> None:
     try:
         key = user_id

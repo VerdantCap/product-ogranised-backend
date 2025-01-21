@@ -1,15 +1,12 @@
 import contextlib
 from typing import Any, AsyncGenerator, AsyncIterator, Dict
 
-from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.ext.declarative import declarative_base
-
 from config import settings
 
 
@@ -74,18 +71,3 @@ sessionmanager = DatabaseSessionManager(
 async def get_postgres_session() -> AsyncGenerator[AsyncSession, None]:
     async with sessionmanager.session() as session:
         yield session
-
-
-POSTGRES_NAMING_CONVENTION: Dict[str, str] = {
-    "ix": "%(table_name)s_%(column_0_name)s_idx",
-    "uq": "%(table_name)s_%(column_0_name)s_key",
-    "ck": "%(table_name)s_%(column_0_name)s_check",
-    "fk": "%(table_name)s_%(column_0_name)s_fkey",
-    "pk": "%(table_name)s_%(column_0_name)s_pkey",
-}
-
-
-# See https://docs.sqlalchemy.org/en/14/orm/declarative_mixins.html#augmenting-the-base
-Base = declarative_base()
-
-Base.metadata = MetaData(naming_convention=POSTGRES_NAMING_CONVENTION)
