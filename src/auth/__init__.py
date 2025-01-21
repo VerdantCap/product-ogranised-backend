@@ -1,0 +1,1 @@
+from .controller import router  # noqa: F401
