@@ -1,5 +1,6 @@
 from enum import Enum  
-from typing import Optional  
+from typing import Optional
+from fastapi import HTTPException  
 
 
 class ItemStatus(str, Enum):  
@@ -133,3 +134,20 @@ class ItemSpace(str, Enum):
     VEHICLES = 'vehicles'  
     TRAVEL = 'travel'  
     SPECIAL_EVENTS = 'special_events'
+    
+    def class_instance(self):
+        class_name = f"{self.name.capitalize()}ItemSpace"  
+        if class_name in globals(): 
+            return globals()[class_name]()  
+        else:  
+            raise HTTPException(status_code=500, detail=f"Class {class_name} does not exist")  
+
+    @staticmethod  
+    def to_select_array():  
+        items = {}  
+        for case in ItemSpace:  
+            try:  
+                items[case.value] = case.class_instance().title()  
+            except HTTPException as e:
+                print(e.detail)  
+        return items 

@@ -1,4 +1,4 @@
-from sqlalchemy import String, DateTime  
+from sqlalchemy import String, DateTime, Boolean
 from sqlalchemy.orm import Mapped,mapped_column, relationship
 from sqlalchemy.sql import func  
 from base import Base
@@ -6,6 +6,7 @@ from datetime import datetime
 
 class User(Base):  
     __tablename__ = 'users'  
+    
     id: Mapped[str] = mapped_column (String, primary_key=True, index=True, nullable=False)  
     name: Mapped[str] = mapped_column(String, index=True, nullable=False)  
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)  
@@ -17,7 +18,12 @@ class User(Base):
     avatar_url: Mapped[str] = mapped_column(String, index=False, nullable=True)
     oauth_id: Mapped[str] = mapped_column(String, nullable=True)  
     oauth_driver: Mapped[str] = mapped_column(String, nullable=True)
-    workspaces = relationship("Workspace", back_populates="owner")
-    tasks = relationship("Task", back_populates="assignee")    
+    email_notification: Mapped[bool]= mapped_column(Boolean, default=False)  
+    sms_notification: Mapped[bool]= mapped_column(Boolean, default=False)  
+    push_notification: Mapped[bool]= mapped_column(Boolean, default=False)
+
+    userworkspace = relationship("UserWorkspace", back_populates="user")
+    tasks_owned = relationship("Task", foreign_keys="Task.owner_id")
+    tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id")    
     files = relationship("File", back_populates="owner")    
     items = relationship("Item", back_populates="owner")    

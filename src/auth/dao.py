@@ -3,6 +3,7 @@ from typing import Any, Optional, Tuple
 
 from fastapi import Depends
 from models.user_model import User
+from models.workspace_model import Workspace
 from sqlalchemy import and_, delete, exists, select, true, update
 
 from db.postgres import AsyncSession, get_postgres_session
@@ -119,3 +120,13 @@ class AuthDAO:
         )
         result: Optional[User] = (await self.db.execute(query)).scalars().first()
         return result
+    
+    def join_workspace(self, user: User, workspace: Workspace):  
+        if workspace not in user.workspaces:  
+            user.workspaces.append(workspace)  
+        self.db.commit()  
+
+    def leave_workspace(self, user: User, workspace: Workspace):  
+        if workspace in user.workspaces:  
+            user.workspaces.remove(workspace)  
+        self.db.commit() 

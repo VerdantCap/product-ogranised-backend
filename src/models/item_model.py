@@ -9,12 +9,7 @@ from base import Base
 from enum import Enum
 from models.user_model import User
 from models.file_model import File
-
-item_association = Table(  
-    'item_association', Base.metadata,  
-    Column('item_id', String, ForeignKey('items.id')),  
-    Column('related_item_id', String, ForeignKey('items.id'))  
-)  
+from models.association_tables import item_association
 
 class Item(Base):  
     __tablename__ = "items"  

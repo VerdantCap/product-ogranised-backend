@@ -2270,6 +2270,22 @@ anyio = ">=3.4.0,<5"
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7)", "pyyaml"]
 
 [[package]]
+name = "stripe"
+version = "11.4.1"
+description = "Python bindings for the Stripe API"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "stripe-11.4.1-py2.py3-none-any.whl", hash = "sha256:8aa47a241de0355c383c916c4ef7273ab666f096a44ee7081e357db4a36f0cce"},
+    {file = "stripe-11.4.1.tar.gz", hash = "sha256:7ddd251b622d490fe57d78487855dc9f4d95b1bb113607e81fd377037a133d5a"},
+]
+
+[package.dependencies]
+requests = {version = ">=2.20", markers = "python_version >= \"3.0\""}
+typing-extensions = {version = ">=4.5.0", markers = "python_version >= \"3.7\""}
+
+[[package]]
 name = "types-cffi"
 version = "1.16.0.20241221"
 description = "Typing stubs for cffi"
@@ -2526,4 +2542,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "b0482b16e09d24d610a2c41b216b0bbb15709f9a6c8d5ab3daa83110bab3c0c0"
+content-hash = "1dfd13fedab552b7b27709286bb23b6240a500c2b852f1dcbf2b946ad1a8b91c"

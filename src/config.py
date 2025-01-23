@@ -49,6 +49,12 @@ class BaseConfig(BaseSettings):
     VERIFICATION_SMTP_USERNAME: str = ""
     VERIFICATION_SMTP_PASSWORD: str = ""
 
+    #stripe
+    STRIPE_SECRET: str=""
+    STRIPE_WEBHOOK_SECRET: str=""
+    STRIPE_HASH: str=""
+    STRIPE_PLAN_STANDARD: str=""
+
     # jwt
     JWT_SECRET: str = "your-secret-key"
     JWT_EXPIRY_DAYS: int = 30
@@ -93,6 +99,12 @@ class DevelopConfig(BaseConfig):
     # CONTACTUS_SMTP_FROM_EMAIL: str = os.environ.get("CONTACTUS_SMTP_FROM_EMAIL", "")
     # CONTACTUS_SMTP_USERNAME: str = os.environ.get("CONTACTUS_SMTP_USERNAME", "alex@getorganised.ai")
     # CONTACTUS_SMTP_PASSWORD: str = os.environ.get("CONTACTUS_SMTP_PASSWORD", "M@ther114")
+
+    #stripe
+    STRIPE_SECRET: str=""
+    STRIPE_WEBHOOK_SECRET: str=""
+    STRIPE_HASH: str=""
+    STRIPE_PLAN_STANDARD: str=""
 
     # verification stmp
     VERIFICATION_SMTP_FROM_EMAIL: str = os.environ.get(

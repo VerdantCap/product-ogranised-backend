@@ -30,14 +30,6 @@ class OTPException(HTTPException):
         self.detail = detail
         self.headers = {"X-Error": StatusCodeEnum.OTP_ERROR.value}
 
-
-class UserNotActivatedException(HTTPException):
-    def __init__(self, detail: str):
-        self.status_code = status.HTTP_418_IM_A_TEAPOT
-        self.detail = detail
-        self.headers = {"X-Error": StatusCodeEnum.USER_NOT_ACTIVATED.value}
-
-
 class IncorrectPwdException(HTTPException):
     def __init__(self, detail: str):
         self.status_code = status.HTTP_418_IM_A_TEAPOT

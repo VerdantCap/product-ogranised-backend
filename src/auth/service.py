@@ -16,8 +16,7 @@ from utils.exceptions import (
     IncorrectPwdException,
     LoginExpiredException,
     NotFoundException,
-    TokenException,
-    UserNotActivatedException,
+    TokenException
 )
 from auth.auth_bearer import JWTBearer
 from auth.dao import AuthDAO
