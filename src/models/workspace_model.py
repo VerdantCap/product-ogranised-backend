@@ -16,22 +16,5 @@ class Workspace(Base):
     spaces_order: Mapped[list]= mapped_column(JSONB)  # Using JSON to store arrays  
 
     userworkspace = relationship("UserWorkspace", back_populates="workspace")
-    events = relationship("Event", back_populates="workspaces")
-    items = relationship("Item", back_populates="workspaces")  
-
-    def has_active_subscription(self) -> bool:  
-        return self.expires_at is None or self.on_grace_period()  
-
-    def on_grace_period(self) -> bool:  
-        return self.expires_at is not None and self.expires_at > datetime.now()  
-    
-    def enabled_spaces_ordered(self) -> List[str]:  
-        enabled_spaces = []  
-        for space_value in self.spaces_order:  
-            try:
-                space = ItemSpace(space_value)  
-                enabled_spaces.append(space)  
-            except ValueError:  
-                # Ignore invalid values  
-                pass  
-        return enabled_spaces  
+    event = relationship("Event", back_populates="workspace")
+    items = relationship("Item", back_populates="workspace")

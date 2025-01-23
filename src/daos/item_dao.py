@@ -1,0 +1,86 @@
+import logging
+from fastapi import Depends
+from typing import Optional, List
+from models.item_model import Item
+from models.file_model import File
+from schemas.file_schema import FileCreate
+from db.postgres import AsyncSession, get_postgres_session
+from datetime import datetime
+from enums import ItemSpace, ItemType, ItemStatus  
+
+class ItemDAO:
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_postgres_session),
+    ):
+        self.db = db
+
+    def get_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
+        return self.db.query(Item).filter(
+            Item.workspace_id == workspace_id,
+            Item.deleted_at.is_(None)
+        ).offset(skip).limit(limit).all()
+
+    def get_by_space(
+        self, 
+        space: ItemSpace, 
+        workspace_id: str
+    ) -> List[Item]:
+        return self.db.query(Item).filter(
+            Item.space == space,
+            Item.workspace_id == workspace_id,
+            Item.deleted_at.is_(None)
+        ).all()
+
+    def get_by_type(
+        self, 
+        type: ItemType, 
+        workspace_id: str
+    ) -> List[Item]:
+        return self.db.query(Item).filter(
+            Item.type == type,
+            Item.workspace_id == workspace_id,
+            Item.deleted_at.is_(None)
+        ).all()
+
+    def get_by_status(
+        self, 
+        status: ItemStatus, 
+        workspace_id: str
+    ) -> List[Item]:
+        query = self.db.query(Item).filter(
+            Item.workspace_id == workspace_id,
+            Item.deleted_at.is_(None)
+        )
+        
+        if status == ItemStatus.ACTIVE:
+            query = query.filter(
+                Item.start_at <= datetime.now(),
+                Item.end_at >= datetime.now()
+            )
+        elif status == ItemStatus.EXPIRED:
+            query = query.filter(Item.end_at < datetime.now())
+        elif status == ItemStatus.RENEWAL:
+            query = query.filter(Item.start_at > datetime.now())
+            
+        return query.all()
+
+    def soft_delete(self, item: Item) -> Item:
+        item.deleted_at = datetime.now()
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def add_file(
+        self, 
+        item: Item, 
+        file_create: FileCreate, 
+        owner_id: str
+    ) -> File:
+        file_data = file_create.dict(exclude_unset=True)
+        file_data['owner_id'] = owner_id
+        file_obj = File(**file_data)
+        item.files.append(file_obj)
+        self.db.commit()
+        self.db.refresh(file_obj)
+        return file_obj

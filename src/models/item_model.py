@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Enum as SqlEnum, Table  
+from sqlalchemy import String, DateTime, ForeignKey, Enum as SqlEnum, Table  
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session, backref  
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
@@ -17,14 +17,15 @@ class Item(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, index=True, nullable=False)  
     space: Mapped[Enum] = mapped_column(SqlEnum(ItemSpace), nullable=False)  
     type: Mapped[Enum] = mapped_column(SqlEnum(ItemType), nullable=False)  
-    fields: Mapped[dict]= mapped_column(JSONB)  
+    description: Mapped[str] = mapped_column(String, nullable=True)
+    fields: Mapped[dict]= mapped_column(JSONB, nullable=True)  
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())  
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  
     workspace_id: Mapped[str] = mapped_column(String, ForeignKey('workspaces.id', ondelete="CASCADE", onupdate="CASCADE"))  
     owner_id: Mapped[str] = mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
 
     # Relationships  
-    workspaces = relationship("Workspace", back_populates="items")  
+    workspace = relationship("Workspace", back_populates="items")  
     owner = relationship("User", back_populates="items")
     transports = relationship("Transport", back_populates="items")  
     accommodations = relationship("Accommodation", back_populates="items")  

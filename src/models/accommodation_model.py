@@ -3,18 +3,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from base import Base 
 from datetime import date
-import uuid   
 
 class Accommodation(Base):  
-    __tablename__ = "accommodations"  
+    __tablename__ = "accommodations"
 
-    id: Mapped[str]= mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))  
+    id: Mapped[str]= mapped_column(String, primary_key=True, index=True, nullable=False)  
     item_id: Mapped[str]= mapped_column(String, ForeignKey('items.id', ondelete="CASCADE", onupdate="CASCADE"))  
     name: Mapped[str]= mapped_column(String, nullable=False)  
     booking_ref: Mapped[str]= mapped_column(String, nullable=True)  
     provider: Mapped[str]= mapped_column(String, nullable=True)  
-    arrival_date: Mapped[date]= mapped_column(Date, nullable=True)  
-    departure_date: Mapped[date]= mapped_column(Date, nullable=True)  
+    arrival_date: Mapped[date]= mapped_column(Date, nullable=False)  
+    departure_date: Mapped[date]= mapped_column(Date, nullable=False)  
     contact_number: Mapped[str]= mapped_column(String, nullable=True)  
     contact_email: Mapped[str]= mapped_column(String, nullable=True)  
     food_drink_included: Mapped[bool]= mapped_column(Boolean, nullable=True, default=False)  

@@ -14,4 +14,4 @@ class Event(Base):
     end_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
 
     # Relationships  
-    workspaces = relationship("Workspace", back_populates="events")
+    workspace = relationship("Workspace", back_populates="event")

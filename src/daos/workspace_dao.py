@@ -1,13 +1,12 @@
 import logging
 from fastapi import Depends
-from typing import Optional
+from typing import Optional, List
 from models.workspace_model import Workspace
 from models.event_model import Event
-from sqlalchemy import and_, delete, exists, select, update
-from db.postgres import AsyncSession, get_postgres_session 
-from models import Workspace  # Assuming you have a Workspace model
-from schemas.workspace_schema import EventCreate  
-
+from sqlalchemy import or_, select, update
+from db.postgres import AsyncSession, get_postgres_session
+from schemas.workspace_schema import EventCreate
+from datetime import datetime  
 
 
 logger = logging.getLogger(__name__)
@@ -19,8 +18,33 @@ class WorkspaceDAO:
     ):
         self.db = db
 
+    def get_by_owner(self, owner_id: str) -> List[Workspace]:
+        return self.db.query(Workspace).filter(Workspace.owner_id == owner_id).all()
+
     async def create_workspace(self, workspace: Workspace) -> None:  
-        self.db.add(workspace)  
+        self.db.add(workspace)
+
+    async def get_active_subscriptions(self) -> List[Workspace]:
+        return self.db.query(Workspace).filter(
+            or_(
+                Workspace.expires_at.is_(None),
+                Workspace.expires_at > datetime.now()
+            )
+        ).all()
+
+    async def maintain_subscription(self, workspace: Workspace) -> Workspace:
+        workspace.cancelled_at = None
+        workspace.expires_at = None
+        self.db.commit()
+        self.db.refresh(workspace)
+        return workspace
+
+    def cancel_subscription(self,workspace: Workspace, expires_at: datetime) -> Workspace:
+        workspace.cancelled_at = datetime.now()
+        workspace.expires_at = expires_at
+        self.db.commit()
+        self.db.refresh(workspace)
+        return workspace
 
     async def set_spaces(self, workspace: Workspace, selected_spaces: list) -> None: 
         query = (
@@ -38,43 +62,17 @@ class WorkspaceDAO:
         result: Optional[Workspace]= (await self.db.execute(query)).scalars().first()
         return result
     
+    def toggle_space( self, workspace: Workspace, space_value: str) -> Workspace:
+        spaces_order = workspace.spaces_order
+        if space_value in spaces_order:
+            spaces_order.remove(space_value)
+        else:
+            spaces_order.append(space_value)
+        workspace.spaces_order = spaces_order
+        self.db.commit()
+        self.db.refresh(workspace)
+        return workspace
+
     def create_event(self, event_data: EventCreate) -> None:  
         db_event = Event(event_data)  
         self.db.add(db_event)  
-
-    # def maintain_subscription(self):  
-    #     was_cancelled = not self.has_active_subscription() or self.on_grace_period()  
-
-    #     self.cancelled_at = None  
-    #     self.expires_at = None  
-    #     if was_cancelled:  
-    #         self.subscription_renewed()  
-    #     return self  
-
-    # def cancel_subscription(self, expires_at: datetime):  
-    #     was_active = self.has_active_subscription()  
-    #     self.cancelled_at = datetime.now()  
-    #     self.expires_at = expires_at  
-    #     if was_active:  
-    #         self.subscription_cancelled()  
-
-    #     return self  
-
-
-
-    # def toggle_space(self, space_value: str):  
-    #     if space_value in self.spaces_order:  
-    #         self.spaces_order.remove(space_value)  
-    #     else:  
-    #         self.spaces_order.append(space_value)  
-    #     return self
-
-    # def is_space_enabled(self, space_value: str) -> bool:  
-    #     return space_value in self.spaces_order  
-
-    # def is_valid_space(self, space_value: str) -> bool:  
-    #     try:  
-    #         ItemSpace(space_value)
-    #         return True  
-    #     except ValueError:  
-    #         return False   

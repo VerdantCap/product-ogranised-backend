@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey  
+from sqlalchemy import String, Text, DateTime, ForeignKey  
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session
 from datetime import datetime  
 from base import Base
@@ -9,8 +9,10 @@ class Task(Base):
     __tablename__ = "tasks"  
 
     id: Mapped[str]= mapped_column(String,  primary_key=True, index=True, nullable=False)
+    workspace_id: Mapped[str]= mapped_column(String, ForeignKey('workspace.id', ondelete="CASCADE", onupdate="CASCADE"))
     title: Mapped[str]= mapped_column(String, nullable=False)  
     due_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
+    description: Mapped[str] = mapped_column(Text, nullable=False)
     completed_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
     assignee_id: Mapped[str]= mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
 
