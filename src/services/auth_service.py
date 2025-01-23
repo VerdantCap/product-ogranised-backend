@@ -7,7 +7,7 @@ from typing import Annotated, Any, Dict, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from models.user_model import User
-from auth.auth_bearer import JWTBearer
+from utils.auth_bearer import JWTBearer
 
 from utils.exceptions import (
     DiffPwdException,
@@ -18,10 +18,10 @@ from utils.exceptions import (
     NotFoundException,
     TokenException
 )
-from auth.auth_bearer import JWTBearer
-from auth.dao import AuthDAO
-from auth.schema import CreateUserIn
-from auth.security import PasswordHashing
+from utils.auth_bearer import JWTBearer
+from daos.auth_dao import AuthDAO
+from schemas.auth_schema import CreateUserIn
+from utils.security import PasswordHashing
 from config import settings
 from db.postgres import AsyncSession, get_postgres_session
 from utils.helpers import normalize_email

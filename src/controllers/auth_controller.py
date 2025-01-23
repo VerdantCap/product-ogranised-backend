@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
-from auth.schema import (
+from schemas.auth_schema import (
     CreateUserIn,
     AccessToken,
     ForgotPassword,
@@ -16,7 +16,7 @@ from auth.schema import (
     ReplacePassword
 )
 
-from auth.service import AuthService, get_current_user
+from services.auth_service import AuthService, get_current_user
 from config import settings
 from utils.route import APIRouter
 from utils.helpers import (
@@ -27,7 +27,7 @@ from utils.helpers import (
 from utils.redis_util import redis_context
 from utils.schema import ID
 
-router = APIRouter()
+auth_router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ CUSTOM_GOOGLE_AUTH_URL = (
     f"&redirect_uri={settings.REDIRECT_URL}"
 )
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@auth_router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_controller(
     user: CreateUserIn,
     auth_service: AuthService = Depends(AuthService),
@@ -59,7 +59,7 @@ async def register_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/login")
+@auth_router.post("/login")
 async def login_controller(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: AuthService = Depends(AuthService),
@@ -78,11 +78,11 @@ async def login_controller(
         logger.error(f"An error occurred while login: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred while login")
 
-@router.get("/google-login")
+@auth_router.get("/google-login")
 async def google_login() -> RedirectResponse:
     return RedirectResponse(url=CUSTOM_GOOGLE_AUTH_URL, status_code=303)
 
-@router.get("/login/callback")
+@auth_router.get("/login/callback")
 async def login_callback_controller(
     code: str | None = None,
     error: str | None = None,
@@ -113,7 +113,7 @@ async def login_callback_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/logout", dependencies=[Depends(get_current_user)])
+@auth_router.post("/logout", dependencies=[Depends(get_current_user)])
 async def logout_controller() -> JSONResponse:
     try:
         response_data = {"message": "Logout successful"}
@@ -123,7 +123,7 @@ async def logout_controller() -> JSONResponse:
         logger.error(f"An error occurred during logout: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@router.post("/{user_id}/generate_code")
+@auth_router.post("/{user_id}/generate_code")
 async def verify_user_email_controller(
     user_id: str,
     email: str,
@@ -156,7 +156,7 @@ async def verify_user_email_controller(
         )
 
 
-@router.post("/{user_id}/verify_code")
+@auth_router.post("/{user_id}/verify_code")
 async def verify_otp_controller(
     user_id: str,
     otp: str,
@@ -184,7 +184,7 @@ async def verify_otp_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/forgot-password/code")
+@auth_router.post("/forgot-password/code")
 async def forgot_password_controller(
     forgot_password: ForgotPassword,
     auth_service: AuthService = Depends(AuthService),
@@ -228,7 +228,7 @@ async def forgot_password_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/forgot-password/verify")
+@auth_router.post("/forgot-password/verify")
 async def verify_otp_forgot_password_controller(
     request: VerifyOtpRequest,
     redis_client: redis.StrictRedis = Depends(redis_context),
@@ -256,7 +256,7 @@ async def verify_otp_forgot_password_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.put("/forgot-password/reset")
+@auth_router.put("/forgot-password/reset")
 async def update_password_controller(
     update_password: ForgotPasswordReset,
     auth_service: AuthService = Depends(AuthService),
@@ -283,7 +283,7 @@ async def update_password_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.put("/replace-password")
+@auth_router.put("/replace-password")
 async def replace_password_controller(
     replace_password: ReplacePassword,
     user_info: dict = Depends(get_current_user),
@@ -308,7 +308,7 @@ async def replace_password_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.delete("/delete")
+@auth_router.delete("/delete")
 async def delete_user_controller(
     user_info: dict = Depends(get_current_user),
     auth_service: AuthService = Depends(AuthService),
@@ -325,7 +325,7 @@ async def delete_user_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.get("/refresh-token")
+@auth_router.get("/refresh-token")
 async def refresh_token_controller(
     user_info: dict = Depends(get_current_user),
     auth_service: AuthService = Depends(AuthService),

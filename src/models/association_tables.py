@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Table, ForeignKey
-from sqlalchemy.sql import func  
+from sqlalchemy import Column, String, Table, ForeignKey
 from base import Base
 
 item_association = Table(  

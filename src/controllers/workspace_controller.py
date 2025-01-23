@@ -1,19 +1,19 @@
 import logging
-from fastapi import HTTPException, Depends, Request  
+from fastapi import HTTPException, Depends  
 from fastapi.responses import RedirectResponse  
-from workspace.service import WorkspaceService
+from services.workspace_service import WorkspaceService
 from models.user_model import User  
-from auth.service import get_current_user
+from services.auth_service import get_current_user
 from utils.route import APIRouter
-from workspace.schema import OnboardingRequest
-from workspace.service import WorkspaceService
+from schemas.workspace_schema import OnboardingRequest, EventCreate
+from services.workspace_service import WorkspaceService
 
-router = APIRouter()
+workspace_router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
 
-@router.post("/create")  
+@workspace_router.post("/create")  
 async def create_workspace(
     data: OnboardingRequest, 
     user: User = Depends(get_current_user),
@@ -58,7 +58,7 @@ async def create_workspace(
 
     return RedirectResponse(url=f"/dashboard?workspace={workspace['name']}")
 
-@router.get('/{workspace_id}/manage')
+@workspace_router.get('/{workspace_id}/manage')
 async def manage_workspace(
     workspace_id: str,
     user: User=Depends(get_current_user),
@@ -82,7 +82,7 @@ async def manage_workspace(
         return RedirectResponse(url="home")
     
 
-@router.get("/{workspace_id}/renewal-required")  
+@workspace_router.get("/{workspace_id}/renewal-required")  
 async def renewal_required(
     workspace_id: str,
     user: User=Depends(get_current_user),
@@ -96,7 +96,7 @@ async def renewal_required(
         return RedirectResponse(url=f"/dashboard?workspace_id={workspace.id}")  
     return {"message": "Please renew your subscription."}  
 
-@router.get("/{workspace_id}/refresh-spaces")
+@workspace_router.get("/{workspace_id}/refresh-spaces")
 async def refresh_spaces(
     workspace_id: str,
     user: User = Depends(get_current_user),
@@ -108,7 +108,7 @@ async def refresh_spaces(
     else:
         raise HTTPException(status_code=404, detail="Workspace not found")
     
-@router.post("/{workspace_id}/update-item-space-order") 
+@workspace_router.post("/{workspace_id}/update-item-space-order") 
 async def update_item_space_order(
     workspace_id: str,
     order: list,
@@ -118,3 +118,21 @@ async def update_item_space_order(
     workspace = workspace_service.update_workspace(workspace, order)
 
     return {"message": "Success", "enabled_spaces": workspace.enabled_spaces_ordered()}
+
+@workspace_router.post("/{workspace_id}/events/")  
+async def create_event(
+    workspace_id: str,
+    event: EventCreate,
+    user: User=Depends(get_current_user),
+    workspace_service: WorkspaceService = Depends(WorkspaceService)
+    ):
+    workspace = workspace_service.get_workspace(workspace_id)
+    if user.id == workspace.owner_id:
+        
+        try:  
+            event = workspace_service.create_event(event)  
+            return {"message": "Diary created successfully.", "event": event}
+        except Exception as e:
+            raise e
+    else:
+        raise HTTPException(status_code=404, detail="Workspace not found")

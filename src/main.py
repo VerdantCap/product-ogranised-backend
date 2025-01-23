@@ -3,7 +3,7 @@ from config import settings
 # from contextlib import asynccontextmanager
 # from typing import AsyncIterator
 from fastapi.middleware.cors import CORSMiddleware
-import auth
+import controllers
 
 # @asynccontextmanager
 # async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -17,15 +17,22 @@ app = FastAPI(
         root_path=settings.ROOT_PATH, openapi_url="/openapi.json"
     )
 app.include_router(
-        auth.router,
+        controllers.auth_router,
         prefix="/auth",
         tags=["auth"],
         responses={404: {"description": "Not found"}},
     )
 
+app.include_router(
+        controllers.workspace_router,
+        prefix="/workspace",
+        tags=["workspace"],
+        responses={404: {"description": "Not found"}},
+    )
+
 origins = [
-    "http://leylinepro.com",
-    "https://leylinepro.com",
+    "http://organised.ai",
+    "https://organised.ai",
     "http://localhost",
     "http://localhost:3000",
 ]
@@ -39,7 +46,6 @@ app.add_middleware(
     expose_headers=["X-Error"],
     allow_origin_regex=r"http[s]?://.*\.(getorganised\.ai|githubpreview\.dev|app\.github\.dev)",
 )
-
 
 if __name__ == "__main__":
     import uvicorn

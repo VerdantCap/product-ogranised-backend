@@ -3,10 +3,10 @@ import hashlib
 import json  
 import stripe  
 from fastapi import Depends, HTTPException
-from workspace.dao import WorkspaceDAO
+from daos.workspace_dao import WorkspaceDAO
 from models.workspace_model import Workspace
 from config import settings
-
+from schemas.workspace_schema import EventCreate
 
 stripe.api_key = settings.STRIPE_SECRET
 
@@ -57,3 +57,6 @@ class WorkspaceService:
     async def update_workspace(self, workspace: Workspace, selected_spaces:  list) -> Workspace:
         workspace = await self.workspace_dao.set_spaces(workspace, selected_spaces)
         return workspace
+    
+    async def create_event(self, event_data: EventCreate):  
+        return self.event_dao.create_event(event_data)  

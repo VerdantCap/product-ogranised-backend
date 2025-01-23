@@ -2,9 +2,11 @@ import logging
 from fastapi import Depends
 from typing import Optional
 from models.workspace_model import Workspace
+from models.event_model import Event
 from sqlalchemy import and_, delete, exists, select, update
 from db.postgres import AsyncSession, get_postgres_session 
-from models import Workspace  # Assuming you have a Workspace model  
+from models import Workspace  # Assuming you have a Workspace model
+from schemas.workspace_schema import EventCreate  
 
 
 
@@ -36,6 +38,10 @@ class WorkspaceDAO:
         result: Optional[Workspace]= (await self.db.execute(query)).scalars().first()
         return result
     
+    def create_event(self, event_data: EventCreate) -> None:  
+        db_event = Event(event_data)  
+        self.db.add(db_event)  
+
     # def maintain_subscription(self):  
     #     was_cancelled = not self.has_active_subscription() or self.on_grace_period()  
 
