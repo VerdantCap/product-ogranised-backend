@@ -5,17 +5,12 @@ from config import settings
 from fastapi.middleware.cors import CORSMiddleware
 import controllers
 
-# @asynccontextmanager
-# async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-#     await load_schedule_and_start_jobs()
-#     scheduler.start()
-#     yield
-#     scheduler.shutdown()
-#     await get_postgres_session().aclose()
-
+# Initialize the FastAPI application
 app = FastAPI(
         root_path=settings.ROOT_PATH, openapi_url="/openapi.json"
     )
+
+# Include the authentication router
 app.include_router(
         controllers.auth_router,
         prefix="/auth",
@@ -23,6 +18,7 @@ app.include_router(
         responses={404: {"description": "Not found"}},
     )
 
+# Include the workspace router
 app.include_router(
         controllers.workspace_router,
         prefix="/workspace",
@@ -30,6 +26,7 @@ app.include_router(
         responses={404: {"description": "Not found"}},
     )
 
+# Define allowed origins for CORS
 origins = [
     "http://organised.ai",
     "https://organised.ai",
@@ -37,6 +34,7 @@ origins = [
     "http://localhost:3000",
 ]
 
+# Add CORS middleware to the application
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -47,6 +45,7 @@ app.add_middleware(
     allow_origin_regex=r"http[s]?://.*\.(getorganised\.ai|githubpreview\.dev|app\.github\.dev)",
 )
 
+# Run the application using Uvicorn
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)

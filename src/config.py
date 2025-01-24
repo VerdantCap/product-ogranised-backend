@@ -4,30 +4,35 @@ import os
 from functools import cache
 from pydantic_settings import BaseSettings
 
+# Path to the directory containing secret files
 SECRETS_PATH = "/app/secrets"
 
 class BaseConfig(BaseSettings):
-    # load environment variables
+    # Base configuration class for loading environment variables
+
+    # General application settings
     FASTAPI_CONFIG: str = ""
     DOMAIN_NAME: str = ""
     ROOT_PATH: str = ""
 
-    # postgres
+    # PostgreSQL database configuration
     SQLALCHEMY_DATABASE_URL: str = (
         "postgresql+asyncpg://postgres:postgres@localhost:5432"
     )
     SQLALCHEMY_ECHO_SQL: bool = False
 
+    # Redis configuration
     REDIS_HOST: str = ""
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str = ""
     REDIS_CELERY_DB: int = 1
 
+    # Storage account configuration
     STORAGE_ACCOUNT: str = ""
     STORAGE_ACCOUNT_KEY: str = ""
 
-    # oidc google
+    # Google OIDC configuration
     GOOGLE_TOKEN_URL: str = ""
     GOOGLE_AUTH_URL: str = ""
     GOOGLE_TOKENINFO_URL: str = ""
@@ -35,38 +40,41 @@ class BaseConfig(BaseSettings):
     GOOGLE_CLIENT_SECRET: str = ""
     REDIRECT_URL: str = ""
 
+    # SMTP server configuration
     SMTP_SERVER: str = ""
     SMTP_PORT: int = 0
-    
 
-    # contact us stmp
+    # Contact us SMTP configuration
     CONTACTUS_SMTP_FROM_EMAIL: str = ""
     CONTACTUS_SMTP_USERNAME: str = ""
     CONTACTUS_SMTP_PASSWORD: str = ""
 
-    # verification stmp
+    # Verification SMTP configuration
     VERIFICATION_SMTP_FROM_EMAIL: str = ""
     VERIFICATION_SMTP_USERNAME: str = ""
     VERIFICATION_SMTP_PASSWORD: str = ""
 
-    #stripe
+    # Stripe configuration
     STRIPE_SECRET: str=""
     STRIPE_WEBHOOK_SECRET: str=""
     STRIPE_HASH: str=""
     STRIPE_PLAN_STANDARD: str=""
 
-    # jwt
+    # JWT configuration
     JWT_SECRET: str = "your-secret-key"
     JWT_EXPIRY_DAYS: int = 30
 
-    # otp
+    # OTP configuration
     OTP_EXPIRY_MINUTES: int = 30
 
     class Config:
+        # Configuration class settings
         case_sensitive = True
 
 
 class DevelopConfig(BaseConfig):
+    # Development-specific configuration settings
+
     FASTAPI_CONFIG: str = "production"
 
     DOMAIN_NAME: str = os.environ.get("DOMAIN_NAME", "")
@@ -84,7 +92,7 @@ class DevelopConfig(BaseConfig):
     STORAGE_ACCOUNT: str = os.environ.get("STORAGE_ACCOUNT", "")
     STORAGE_ACCOUNT_KEY: str = os.environ.get("STORAGE_ACCOUNT_KEY", "")
 
-    # oidc google
+    # Google OIDC configuration
     GOOGLE_TOKEN_URL: str = os.environ.get("GOOGLE_TOKEN_URL", "")
     GOOGLE_AUTH_URL: str = os.environ.get("GOOGLE_AUTH_URL", "")
     GOOGLE_TOKENINFO_URL: str = os.environ.get("GOOGLE_TOKENINFO_URL", "")
@@ -95,33 +103,29 @@ class DevelopConfig(BaseConfig):
     SMTP_SERVER: str = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT: int = os.environ.get("SMTP_PORT", 587)
 
-    # contact us stmp
-    # CONTACTUS_SMTP_FROM_EMAIL: str = os.environ.get("CONTACTUS_SMTP_FROM_EMAIL", "")
-    # CONTACTUS_SMTP_USERNAME: str = os.environ.get("CONTACTUS_SMTP_USERNAME", "alex@getorganised.ai")
-    # CONTACTUS_SMTP_PASSWORD: str = os.environ.get("CONTACTUS_SMTP_PASSWORD", "M@ther114")
-
-    #stripe
+    # Stripe configuration
     STRIPE_SECRET: str=""
     STRIPE_WEBHOOK_SECRET: str=""
     STRIPE_HASH: str=""
     STRIPE_PLAN_STANDARD: str=""
 
-    # verification stmp
+    # Verification SMTP configuration
     VERIFICATION_SMTP_FROM_EMAIL: str = os.environ.get(
         "VERIFICATION_SMTP_FROM_EMAIL", "support@getorganised.ai"
     )
     VERIFICATION_SMTP_USERNAME: str = os.environ.get("VERIFICATION_SMTP_USERNAME", "bluxking06@gmail.com")
     VERIFICATION_SMTP_PASSWORD: str = os.environ.get("VERIFICATION_SMTP_PASSWORD", "dhng khot tkst lzuc")
 
-    # jwt
+    # JWT configuration
     JWT_SECRET: str = os.environ.get("JWT_SECRET", "your-secret-key")
     JWT_EXPIRY_DAYS: int = os.environ.get("JWT_EXPIRY_DAYS", 30)
 
-    # otp
+    # OTP configuration
     OTP_EXPIRY_MINUTES: int = os.environ.get("OTP_EXPIRY_MINUTES", 30)
 
 @cache
 def get_settings() -> BaseConfig:
+    # Function to retrieve the current configuration settings
     config_cls_dict = {
         "development": DevelopConfig
     }
@@ -138,4 +142,5 @@ def get_settings() -> BaseConfig:
     return config_obj
 
 
+# Global settings object for accessing configuration settings
 settings: BaseConfig = get_settings()

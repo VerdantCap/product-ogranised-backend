@@ -26,24 +26,37 @@ from config import settings
 from db.postgres import AsyncSession, get_postgres_session
 from utils.helpers import normalize_email
 
+# OAuth2 scheme for password-based authentication
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.ROOT_PATH}/auth/login", auto_error=False
 )
 
+# Set up a logger for the AuthService
 logger = logging.getLogger(__name__)
 
-
 class AuthService:
+    """
+    Service class for handling user authentication and authorization.
+
+    This class provides methods for user registration, login, token generation, and password management.
+    """
+
     def __init__(
         self,
         auth_dao: AuthDAO = Depends(AuthDAO),
     ):
+        # Initialize the AuthService with an AuthDAO instance
         self.auth_dao = auth_dao
 
     async def create_user(
         self,
         create_user_in: CreateUserIn,
     ) -> str:
+        """
+        Create a new user in the system.
+
+        Returns the user ID of the newly created user.
+        """
         create_user_in.email = normalize_email(create_user_in.email)
 
         if await self.auth_dao.check_email_exists(create_user_in.email):
@@ -75,6 +88,11 @@ class AuthService:
         email: str,
         password: str,
     ) -> Any:
+        """
+        Handle user login by verifying credentials.
+
+        Returns an access token if login is successful.
+        """
         email = normalize_email(email)
 
         user = await self.auth_dao.get_user_by_email(email)
@@ -92,6 +110,11 @@ class AuthService:
             raise IncorrectPwdException("Incorrect password")
 
     async def generate_access_token(self, user: User) -> str:
+        """
+        Generate a JWT access token for the user.
+
+        Returns the generated JWT token.
+        """
         profile = dict(
             avatar_url=user.avatar_url,
             name=user.name,
@@ -110,6 +133,11 @@ class AuthService:
         return jwt_token
 
     async def generate_otp_verification_token(self, email: str) -> str:
+        """
+        Generate a JWT token for OTP verification.
+
+        Returns the generated JWT token.
+        """
         email = normalize_email(email)
 
         payload = {"email": email, "type": "otp"}
@@ -121,12 +149,20 @@ class AuthService:
         return jwt_token
 
     async def delete_user(self, user_email: str) -> None:
+        """
+        Delete a user from the system by email.
+        """
         user_email = normalize_email(user_email)
 
         await self.auth_dao.delete_user_by_email(user_email)
         await self.auth_dao.db.commit()
 
     async def refresh_token(self, user_id: str) -> Any:
+        """
+        Refresh the access token for a user.
+
+        Returns the refreshed access token.
+        """
         user = await self.auth_dao.get_user_by_id(user_id)
         if not user:
             logger.warning(f"User {user_id} not found")
@@ -134,6 +170,9 @@ class AuthService:
         return await self.generate_access_token(user)
 
     async def update_password(self, token: str, new_password: str) -> None:
+        """
+        Update a user's password using a token for verification.
+        """
         decoded_token = decode_token(token)
         email = decoded_token["email"]
 
@@ -159,6 +198,11 @@ class AuthService:
             raise NotFoundException(f"No user found with email '{email}'.")
 
     async def handle_oidc_login(self, code: str) -> Any:
+        """
+        Handle OpenID Connect login using an authorization code.
+
+        Returns an access token if login is successful.
+        """
         data = {
             "code": code,
             "client_id": settings.GOOGLE_CLIENT_ID,
@@ -213,6 +257,9 @@ class AuthService:
     async def replace_password(
         self, email: str, old_password: str, new_password: str
     ) -> None:
+        """
+        Replace a user's password with a new one after verifying the old password.
+        """
         email = normalize_email(email)
 
         user = await self.auth_dao.get_user_by_email(email)
@@ -240,6 +287,11 @@ class AuthService:
 async def compose_forgot_pwd_message(
     email: str, payload: dict, expiry_minutes: int
 ) -> str:
+    """
+    Compose a message for password reset with a tokenized URL.
+
+    Returns the message containing the reset URL.
+    """
     reset_pwd_url = f"{settings.DOMAIN_NAME}/mktp/update-password"
 
     jwt_token = JWTBearer.generate_jwt(payload=payload, expiry_minutes=expiry_minutes)
@@ -251,6 +303,11 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
     db: AsyncSession = Depends(get_postgres_session),
 ) -> Optional[Any]:
+    """
+    Retrieve the current user based on the provided token.
+
+    Returns the decoded token if the user is found.
+    """
     if not token:
         raise NotFoundException("User not found.")
 
@@ -279,6 +336,11 @@ async def get_current_user(
     return decoded_token
 
 def decode_token(token: str) -> Any:
+    """
+    Decode a JWT token and return its payload.
+
+    Raises exceptions for expired or invalid tokens.
+    """
     try:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
@@ -295,6 +357,11 @@ def decode_token(token: str) -> Any:
 
 
 def password_check(password: str) -> None:
+    """
+    Validate a password against security criteria.
+
+    Raises an HTTPException if the password does not meet the criteria.
+    """
     # calculating the length
     length_error = len(password) < 8
 

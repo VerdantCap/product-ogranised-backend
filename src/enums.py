@@ -2,16 +2,18 @@ from enum import Enum
 from typing import Optional
 from fastapi import HTTPException  
 
-
+# Enum class representing different statuses an item can have
 class ItemStatus(str, Enum):  
     ALL = 'all'  
     ACTIVE = 'active'  
     EXPIRED = 'expired'  
     RENEWAL = 'renewal'  
 
+    # Method to get a human-readable label for the status
     def get_label(self) -> str:  
         return self.name.replace('_', ' ').title()  
 
+    # Method to get the scope of the status
     def scope(self):  
         return {  
             ItemStatus.ACTIVE: "active()",  
@@ -19,7 +21,7 @@ class ItemStatus(str, Enum):
             ItemStatus.RENEWAL: "renewal()"  
         }.get(self, None)  
 
-
+# Enum class representing different types of items
 class ItemType(str, Enum):  
     CAR_INSURANCE = 'car-insurance'  
     HOME_INSURANCE = 'home-insurance'  
@@ -56,6 +58,7 @@ class ItemType(str, Enum):
     WEDDING = 'wedding'  
     FUNERAL = 'funeral'  
 
+    # Method to get the icon associated with the item type
     def get_icon(self) -> Optional[str]:  
         icon_map = {  
             ItemType.CAR_INSURANCE: 'fas-car-crash',  
@@ -88,19 +91,22 @@ class ItemType(str, Enum):
         }  
         return icon_map.get(self, 'iconsax-bul-box-1')  
 
+    # Method to get a human-readable label for the item type
     def get_label(self) -> str:  
         return self.name.replace('_', ' ').title()  
 
-
+# Enum class representing different steps in a user profile
 class ProfileStep(str, Enum):  
     CREATE_TASK = 'create-task'  
     CREATE_ITEM = 'create-item'  
     CREATE_EVENT = 'create-event'  
     INVITE_MEMBERS = 'invite-members'  
 
+    # Method to get a human-readable label for the profile step
     def get_label(self) -> str:  
         return self.name.replace('_', ' ').title()  
 
+    # Method to get the URL associated with the profile step
     def get_url(self) -> Optional[str]:  
         url_map = {  
             ProfileStep.CREATE_EVENT: '/events/create',  
@@ -109,7 +115,7 @@ class ProfileStep(str, Enum):
         }  
         return url_map.get(self, None)  
 
-
+# Enum class representing different types of files
 class FileType(str, Enum):  
     CERTIFICATE = 'certificate'  
     POLICY = 'policy'  
@@ -121,10 +127,11 @@ class FileType(str, Enum):
     PHOTO = 'photo'  
     QUOTE = 'quote'  
 
-
+# Enum class representing different billing plans
 class BillingPlan(str, Enum):  
     STANDARD = 'standard'  
-    
+
+# Enum class representing different item spaces
 class ItemSpace(str, Enum):  
     INSURANCE = 'insurance'  
     HOUSEHOLD = 'household'  
@@ -135,6 +142,7 @@ class ItemSpace(str, Enum):
     TRAVEL = 'travel'  
     SPECIAL_EVENTS = 'special_events'
     
+    # Method to get the class instance associated with the item space
     def class_instance(self):
         class_name = f"{self.name.capitalize()}ItemSpace"  
         if class_name in globals(): 
@@ -142,6 +150,7 @@ class ItemSpace(str, Enum):
         else:  
             raise HTTPException(status_code=500, detail=f"Class {class_name} does not exist")  
 
+    # Static method to convert item spaces to a select array
     @staticmethod  
     def to_select_array():  
         items = {}  
@@ -150,4 +159,4 @@ class ItemSpace(str, Enum):
                 items[case.value] = case.class_instance().title()  
             except HTTPException as e:
                 print(e.detail)  
-        return items 
+        return items

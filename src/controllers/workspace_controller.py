@@ -8,10 +8,11 @@ from utils.route import APIRouter
 from schemas.workspace_schema import OnboardingRequest, EventCreate
 from services.workspace_service import WorkspaceService
 
+# Create a new API router for workspace-related endpoints
 workspace_router = APIRouter()
 
+# Set up a logger for the workspace controller
 logger = logging.getLogger(__name__)
-
 
 @workspace_router.post("/create")  
 async def create_workspace(
@@ -19,6 +20,14 @@ async def create_workspace(
     user: User = Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ):  
+    """
+    Create a new workspace.
+
+    This function handles the creation of a new workspace, including validation of the HMAC hash,
+    retrieval of Stripe session and subscription, and user joining the workspace.
+
+    Returns a redirect response to the dashboard with the newly created workspace.
+    """
     # Validate HMAC hash  
     hash_data = {  
         'plan': data.plan,  
@@ -64,6 +73,14 @@ async def manage_workspace(
     user: User=Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ): 
+    """
+    Manage workspace.
+
+    This function handles the management of a workspace, including retrieval of the workspace,
+    verification of ownership, and creation of a billing portal session.
+
+    Returns a redirect response to the billing portal or home page.
+    """
     workspace = await workspace.get_workspace(workspace_id)  
     if workspace.owner_id != user.id:  
         raise HTTPException(status_code=403, detail="Access forbidden")  
@@ -88,6 +105,13 @@ async def renewal_required(
     user: User=Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ):  
+    """
+    Check if workspace renewal is required.
+
+    This function checks if a workspace requires renewal based on the provided workspace ID.
+
+    Returns a redirect response to the dashboard if the subscription is active, or a message indicating renewal is required.
+    """
     # Fetch the workspace based on the provided workspace_id  
     workspace = await workspace_service.get_workspace(workspace_id) 
     if not workspace or workspace.owner_id != user.id:  
@@ -102,6 +126,13 @@ async def refresh_spaces(
     user: User = Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ):
+    """
+    Refresh workspace spaces.
+
+    This function refreshes the enabled spaces for a workspace based on the provided workspace ID.
+
+    Returns the enabled spaces in the workspace.
+    """
     workspace = workspace_service.get_workspace(workspace_id)
     if workspace.owner_id == user.id:
         return {"enabled_spaces": workspace.enabled_spaces_ordered()}
@@ -114,6 +145,13 @@ async def update_item_space_order(
     order: list,
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ): 
+    """
+    Update item space order.
+
+    This function updates the order of item spaces in a workspace based on the provided workspace ID and order.
+
+    Returns a message indicating success and the updated enabled spaces.
+    """
     workspace = workspace_service.get_workspace(workspace_id)
     workspace = workspace_service.update_workspace(workspace, order)
 
@@ -126,6 +164,13 @@ async def create_event(
     user: User=Depends(get_current_user),
     workspace_service: WorkspaceService = Depends(WorkspaceService)
     ):
+    """
+    Create an event in a workspace.
+
+    This function creates a new event in a workspace based on the provided workspace ID and event data.
+
+    Returns a message indicating success and the created event.
+    """
     workspace = workspace_service.get_workspace(workspace_id)
     if user.id == workspace.owner_id:
         

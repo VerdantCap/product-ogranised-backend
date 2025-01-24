@@ -27,10 +27,13 @@ from utils.helpers import (
 from utils.redis_util import redis_context
 from utils.schema import ID
 
+# Create a new API router for authentication-related endpoints
 auth_router = APIRouter()
 
+# Set up a logger for the authentication controller
 logger = logging.getLogger(__name__)
 
+# Custom Google authentication URL
 CUSTOM_GOOGLE_AUTH_URL = (
     f"{settings.GOOGLE_AUTH_URL}"
     "?response_type=code"
@@ -44,6 +47,13 @@ async def register_controller(
     user: CreateUserIn,
     auth_service: AuthService = Depends(AuthService),
 ) -> ID:
+    """
+    Register a new user.
+
+    This function handles user registration by creating a new user in the system.
+
+    Returns the ID of the newly created user.
+    """
     try:
         user_id = await auth_service.create_user(user)
         return ID(id=user_id)
@@ -64,6 +74,13 @@ async def login_controller(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service: AuthService = Depends(AuthService),
 ) -> AccessToken:
+    """
+    User login.
+
+    This function handles user login by verifying the provided credentials.
+
+    Returns an access token if the login is successful.
+    """
     try:
         access_token = await auth_service.handle_login(
             form_data.username, form_data.password
@@ -80,6 +97,11 @@ async def login_controller(
 
 @auth_router.get("/google-login")
 async def google_login() -> RedirectResponse:
+    """
+    Google login.
+
+    This function redirects the user to the Google authentication page.
+    """
     return RedirectResponse(url=CUSTOM_GOOGLE_AUTH_URL, status_code=303)
 
 @auth_router.get("/login/callback")
@@ -88,6 +110,13 @@ async def login_callback_controller(
     error: str | None = None,
     auth_service: AuthService = Depends(AuthService),
 ) -> RedirectResponse:
+    """
+    Login callback.
+
+    This function handles the callback from the Google authentication process.
+
+    Redirects the user to the appropriate page based on the authentication result.
+    """
     try:
         if error:
             raise HTTPException(status_code=400, detail=f"Authorization error: {error}")
@@ -115,6 +144,13 @@ async def login_callback_controller(
 
 @auth_router.post("/logout", dependencies=[Depends(get_current_user)])
 async def logout_controller() -> JSONResponse:
+    """
+    User logout.
+
+    This function handles user logout by invalidating the user's session.
+
+    Returns a JSON response indicating that the logout was successful.
+    """
     try:
         response_data = {"message": "Logout successful"}
         return JSONResponse(content=response_data, status_code=200)
@@ -129,6 +165,13 @@ async def verify_user_email_controller(
     email: str,
     redis_client: redis.Redis = Depends(redis_context),
 ) -> None:
+    """
+    Generate verification code for user email.
+
+    This function generates a verification code and sends it to the user's email address.
+
+    The function returns nothing.
+    """
     try:
         key = user_id
         verification_code = await generate_verification_code(
@@ -313,6 +356,13 @@ async def delete_user_controller(
     user_info: dict = Depends(get_current_user),
     auth_service: AuthService = Depends(AuthService),
 ) -> None:
+    """
+    Delete user account.
+
+    This function is responsible for deleting the user account associated with the provided token.
+
+    The function returns nothing if the account is deleted successfully.
+    """
     try:
         logger.info("delete user for service test")
         user_email = user_info["email"]
@@ -330,6 +380,13 @@ async def refresh_token_controller(
     user_info: dict = Depends(get_current_user),
     auth_service: AuthService = Depends(AuthService),
 ) -> AccessToken:
+    """
+    Refresh access token.
+
+    This function is responsible for refreshing the access token for the user associated with the provided token.
+
+    Returns a new access token.
+    """
     try:
         user_id = user_info.get("user_id", "")
         access_token = await auth_service.refresh_token(user_id)
