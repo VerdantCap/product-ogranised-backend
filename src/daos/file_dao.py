@@ -14,6 +14,27 @@ class FileDAO:
     ):
         self.db = db
 
+    def create_file(self, file: File):
+        self.db.add(file)
+        self.db.commit()
+        self.db.refresh(file)
+        return file
+
+    def update_file(self, file: File):
+        self.db.add(file)
+        self.db.commit()
+        self.db.refresh(file)
+        return file
+
+    def delete_file(self, file: File):
+        self.db.delete(file)
+        self.db.commit()
+
+    def get_by_id( self, file_id: str) -> File:
+        return self.db.query(File).filter(
+            File.id == file_id
+        ).first()
+
     def get_by_workspace( self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
         return self.db.query(File).filter(
             File.workspace_id == workspace_id
@@ -24,3 +45,6 @@ class FileDAO:
             File.category == category,
             File.workspace_id == workspace_id
         ).all()
+    
+    def get_multi(self, skip: int = 0, limit: int = 100) -> List[File]:
+        return self.db.query(File).offset(skip).limit(limit).all()

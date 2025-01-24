@@ -15,6 +15,29 @@ class ItemDAO:
     ):
         self.db = db
 
+    def create_item(self, item: Item) -> Item:
+        self.db.add(item)
+        self.db.commit()
+        return item
+    
+    def get_item_by_id(self, item_id: int) -> Item:
+        return self.db.query(Item).filter(Item.id == item_id).first()
+    
+    def update_item(self, item: Item) -> Item:
+        self.db.add(item)
+        self.db.commit()
+        return item
+    
+    def delete_item(self, item: Item) -> None:
+        self.db.delete(item)
+        self.db.commit()
+
+    def get_by_id(self, item_id: int) -> Optional[Item]:
+        return self.db.query(Item).filter(Item.id == item_id).first()
+    
+    def get_by_user(self, user_id: str, skip: int = 0, limit: int = 100) -> List[Item]: 
+        return self.db.query(Item).filter(Item.user_id == user_id).offset(skip).limit(limit).all()
+
     def get_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
         return self.db.query(Item).filter(
             Item.workspace_id == workspace_id,
@@ -65,8 +88,29 @@ class ItemDAO:
             
         return query.all()
 
+    def get_by_workspace_and_user(self, workspace_id: str, user_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
+        return self.db.query(Item).filter(
+            Item.workspace_id == workspace_id,
+            Item.user_id == user_id
+        ).offset(skip).limit(limit).all()
+
+    def get_multi(self, skip: int = 0, limit: int = 100) -> List[Item]:
+        return self.db.query(Item).offset(skip).limit(limit).all()
+
     def soft_delete(self, item: Item) -> Item:
         item.deleted_at = datetime.now()
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def add_related_item(self, item: Item, related_item: Item):
+        item.related_items.append(related_item)
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def remove_related_item(self, item: Item, related_item: Item):
+        item.related_items.remove(related_item)
         self.db.commit()
         self.db.refresh(item)
         return item
@@ -77,9 +121,8 @@ class ItemDAO:
         file_create: FileCreate, 
         owner_id: str
     ) -> File:
-        file_data = file_create.dict(exclude_unset=True)
-        file_data['owner_id'] = owner_id
-        file_obj = File(**file_data)
+        file_create['owner_id'] = owner_id
+        file_obj = File(**file_create)
         item.files.append(file_obj)
         self.db.commit()
         self.db.refresh(file_obj)

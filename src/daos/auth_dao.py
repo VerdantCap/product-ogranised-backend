@@ -1,6 +1,5 @@
 import logging
-from typing import Any, Optional, Tuple
-
+from typing import Any, Optional, Tuple, List
 from fastapi import Depends
 from models.user_model import User
 from models.workspace_model import Workspace
@@ -21,6 +20,50 @@ class AuthDAO:
     def create_user(self, user: User) -> None:
         self.db.add(user)
 
+    async def update_user(self, user: User) -> User:
+        self.db.add(user)
+        await self.db.commit()
+        return user
+    
+    async def update_user_name(self, user: User, new_name: str) -> None:
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(user_name=new_name)
+        )
+        await self.db.execute(query)
+
+    async def update_user_email(self, user: User, new_email: str) -> None:
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(email=new_email)
+        )
+        await self.db.execute(query)
+
+    async def update_user_password(self, user: User, new_password: str) -> None:
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(password=new_password)
+        )
+        await self.db.execute(query)
+
+    async def delete_user_by_id(self, user_id: str) -> None:
+        query = delete(User).where(User.id == user_id)
+        await self.db.execute(query)
+
+    async def delete_user_by_email(self, email: str) -> None:
+        query = delete(User).where(User.email == email)
+        await self.db.execute(query)
+
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        query = select(User).where(
+            User.id == user_id
+        )
+        result: Optional[User] = (await self.db.execute(query)).scalars().first()
+        return result
+
     async def get_user_by_email(self, email: str) -> Optional[User]:
         query = (
             select(User)
@@ -32,28 +75,6 @@ class AuthDAO:
         result: Optional[User] = (await self.db.execute(query)).scalars().first()
         return result
     
-    async def check_email_exists(self, user_email: str) -> Any:
-        query = select(
-            exists().where(
-                and_(
-                    User.email == user_email
-                )
-            )
-        )
-        return (await self.db.execute(query)).scalar()
-
-    async def delete_user_by_email(self, email: str) -> None:
-        query = delete(User).where(User.email == email)
-        await self.db.execute(query)
-
-    async def update_user_password(self, user: User, new_password: str) -> None:
-        query = (
-            update(User)
-            .where(User.id == user.id)
-            .values(password=new_password)
-        )
-        await self.db.execute(query)
-
     async def get_user_by_google_sub(self, google_sub: str) -> Optional[User]:
         query = select(User).where(User.google_sub == google_sub)
         result: Optional[User] = (await self.db.execute(query)).scalars().first()
@@ -93,34 +114,25 @@ class AuthDAO:
             else True,
         )
 
-
-    async def get_user(
-        self, email: str, user_id: Optional[str] = None
-    ) -> Optional[User]:
-        if user_id:
-            query = select(User).where(
+    async def check_email_exists(self, user_email: str) -> Any:
+        query = select(
+            exists().where(
                 and_(
-                    User.id == user_id,
-                    User.email == email
+                    User.email == user_email
                 )
             )
-        else:
-            query = select(User).where(
-                and_(
-                    User.email == email,
-                    User.is_email_verified,
-                )
-            )
-        result: Optional[User] = (await self.db.execute(query)).scalars().first()
-        return result
-    
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        query = select(User).where(
-            User.id == user_id
         )
-        result: Optional[User] = (await self.db.execute(query)).scalars().first()
-        return result
+        return (await self.db.execute(query)).scalar()
     
+    def get_oauthed(self, driver: Optional[str] = None) -> List[User]:
+        query = self.db.query(User).filter(User.oauth_id.isnot(None))
+        if driver:
+            query = query.filter(User.oauth_driver == driver)
+        return query.all()
+
+    def get_multi(self, skip: int = 0, limit: int = 100) -> List[User]:
+        return self.db.query(User).offset(skip).limit(limit).all()
+
     def join_workspace(self, user: User, workspace: Workspace):  
         if workspace not in user.workspaces:  
             user.workspaces.append(workspace)  
