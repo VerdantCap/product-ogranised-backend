@@ -1,6 +1,7 @@
-from sqlalchemy import String, DateTime, Booleanm, Text
+from sqlalchemy import String, DateTime, Boolean, Text, ForeignKey
 from sqlalchemy.orm import Mapped,mapped_column, relationship
-from sqlalchemy.sql import func  
+from sqlalchemy.sql import func
+from sqlalchemy.ext.hybrid import hybrid_property
 from base import Base
 from datetime import datetime
 from models.association_tables import user_workspace

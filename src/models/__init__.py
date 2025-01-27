@@ -11,7 +11,7 @@ from models.workspace_model import Workspace
 from models.job_model import Job
 from models.jobbatch_model import JobBatch
 from models.failed_job_model import FailedJob
-from models.userworkspace_model import UserWorkspace
+# from models.userworkspace_model import UserWorkspace
 
 __all__ = [
     "Base",
@@ -26,6 +26,5 @@ __all__ = [
     "Workspace",
     "Job",
     "JobBatch",
-    "FailedJob",
-    "UserWorkspace"
+    "FailedJob"
 ]

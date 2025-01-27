@@ -5,6 +5,7 @@ from datetime import datetime
 from base import Base
 from enums import ItemSpace
 from typing import List
+from models.association_tables import user_workspace
 
 class Workspace(Base):  
     __tablename__ = "workspaces"  
