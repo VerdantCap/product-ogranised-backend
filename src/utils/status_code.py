@@ -1,0 +1,25 @@
+from enum import Enum
+
+
+class StatusCodeEnum(str, Enum):
+    OK = "10000"
+
+    DUPLICATE = "20003"
+    TOKEN = "20004"
+    OTP_ERROR = "20005"
+    IN_PROGRESS = "20006"
+    NOT_FOUND = "20008"
+    EXCEED_MAX_LIMIT = "20009"
+    UPDATE_ERROR = "20010"
+    INVALID_STATUS = "20011"
+    EXIST_CHILD_NODE = "20012"
+    PROJECT_TIMELINE_EXCEEDED = "20013"
+    BAD_REQUEST = "20014"
+    FORBIDDEN_REQUEST = "20015"
+
+    # 3xxxx user exceptions
+    USER_NOT_ACTIVATED = "30001"
+    INCORRECT_PWD = "30002"
+    DIFF_PWD = "30003"
+    GOOGLE_AUTH = "30004"
+    LOGIN_EXPIRED = "30005"
