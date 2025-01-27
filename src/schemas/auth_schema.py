@@ -1,6 +1,20 @@
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
+class UserBase(BaseModel):
+    name: str 
+    email: str
+    email_verified_at: Optional[datetime]    
+    oauth_id: Optional[str] = None
+    oauth_driver: Optional[str]
+    access_token: Optional[str]
+    refresh_token: Optional[str]
+    access_token_expires_at: Optional[datetime]
+    email_notification: bool
+    sms_notification: bool
+    push_notification: bool
+    active_workspace_id: Optional[str]
+    
 class CreateUserIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 

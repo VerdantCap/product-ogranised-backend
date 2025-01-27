@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from models.user_model import User  
 from services.auth_service import get_current_user
 from utils.route import APIRouter
-from schemas.workspace_schema import OnboardingRequest, WorkspaceUpdate
+from schemas.workspace_schema import WorkspaceCreate, WorkspaceUpdate
 from daos.workspace_dao import WorkspaceDAO
 from daos.auth_dao import AuthDAO
 from daos.event_dao import EventDAO
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @workspace_router.post("/create")  
 async def create_workspace(
-    data: OnboardingRequest, 
+    data: WorkspaceCreate, 
     user: User = Depends(get_current_user),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     stripe_service: StripeService = Depends(StripeService)
@@ -231,6 +231,21 @@ async def cancel_subscription(
         raise HTTPException(status_code=404, detail="Workspace not found")
     
     return workspace_dao.cancel_subscription(workspace, expires_at)
+
+@workspace_router.post("/{workspace_id}/set-active")
+async def set_active_workspace(
+    workspace_id: str,
+    user: User = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+    auth_dao: AuthDAO = Depends(AuthDAO)
+    ):
+    workspace = workspace_dao.get_workspace_by_id(workspace_id)
+    if not workspace or workspace.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    return auth_dao.set_active_workspace(user, workspace)
+
+
 
 @workspace_router.get("/{workspace_id}/members")
 async def list_members(

@@ -73,6 +73,17 @@ class AuthDAO:
         )
         await self.db.execute(query)
 
+    async def update_user_google_token(self, user: User, access_token: str, expires_at: datetime) -> None:
+        """
+        Update the user's password in the database.
+        """
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(access_token=access_token, expires_at=expires_at)
+        )
+        await self.db.execute(query)
+
     async def delete_user_by_id(self, user_id: str) -> None:
         """
         Delete a user record from the database by user ID.
@@ -227,3 +238,18 @@ class AuthDAO:
         if workspace in user.workspaces:  
             user.workspaces.remove(workspace)  
         self.db.commit()
+
+    def set_active_workspace(self,user: User, workspace: Optional[Workspace] = None) -> User:  
+        """
+        Set the active workspace for a user.
+
+        Commits the change to the database.
+        """
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(active_workspace_id=workspace.id)
+        )
+        self.db.commit()
+
+        return user

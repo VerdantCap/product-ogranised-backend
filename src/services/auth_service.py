@@ -157,6 +157,74 @@ class AuthService:
         await self.auth_dao.delete_user_by_email(user_email)
         await self.auth_dao.db.commit()
 
+    def refresh_google_token(self, user: User):
+        if not user.refresh_token:
+            return None
+        
+        credentials = Credentials(
+            token = user.access_token,
+            refresh_token = user.refresh_token,
+            token_uri = settings.GOOGLE_TOKEN_URL,
+            client_id = settings.GOOGLE_CLIENT_ID,
+            client_secret = settings.GOOGLE_CLIENT_SECRET,
+        )
+
+        if credentials.expired:
+            credentials = credentials.refresh()
+            user_dao.update(
+                user,credentials.token,
+                datetime.utcnow() + timedelta(seconds=credentials.expiry.second)
+            )
+            
+        return credentials
+    
+    def get_google_calendar_events(
+        self,
+        user: User,
+        start_date: datetime,
+        end_date: datetime,
+    ):
+        credentials = self.refresh_google_token(user)
+        if not credentials:
+            return []
+
+        try:
+            service = build(
+                "calendar",
+                "v3",
+                credentials=credentials
+            )
+
+            event_result = service.events().list(
+                calendarId="primary",
+                timeMin=start_date.isoformat() + 'Z',
+                timeMax=end_date.isoformat() + 'Z',
+                maxResults=100,
+                singleEvents=True,
+                orderBy="startTime",
+            ).execute()
+
+            events = event_result.get("items", [])
+
+            formatted_events = []
+            for event in events:
+                start = event["start"].get("dateTime", event["start"].get("date"))
+                end = event["end"].get("dateTime", event["end"].get("date"))
+                formatted_event = {
+                    "summary": event["summary"],
+                    "start": start,
+                    "end": end,
+                    "description": event.get("description", ""),
+                    "location": event.get("location", ""),
+                }
+                formatted_events.append(formatted_event)
+
+            return formatted_events
+
+        except HttpError as e:
+            logger.error(f"An error occurred: {e}")
+            return []
+
     async def refresh_token(self, user_id: str) -> Any:
         """
         Refresh the access token for a user.

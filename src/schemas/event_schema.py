@@ -8,14 +8,17 @@ class Event(BaseModel):
     owner_id: str
     name: str
     description: Optional[str]
-    workspace: Workspace
+    start_at: str
+    end_at: str
 
 class EventCreate(BaseModel):
-    workspace_id: str
     name: str
     description: Optional[str]
+    start_at: str
+    end_at: str
 
 class EventUpdate(BaseModel):
-    id: str
-    name: str
+    name: Optional[str]
     description: Optional[str]
+    start_at: Optional[str]
+    end_at: Optional[str]
