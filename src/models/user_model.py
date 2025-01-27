@@ -3,6 +3,7 @@ from sqlalchemy.orm import Mapped,mapped_column, relationship
 from sqlalchemy.sql import func  
 from base import Base
 from datetime import datetime
+from models.association_tables import user_workspace
 
 class User(Base):  
     __tablename__ = 'users'  
@@ -22,7 +23,11 @@ class User(Base):
     sms_notification: Mapped[bool]= mapped_column(Boolean, default=False)  
     push_notification: Mapped[bool]= mapped_column(Boolean, default=False)
 
-    userworkspace = relationship("UserWorkspace", back_populates="user")
+    workspaces = relationship(
+        'Workspace',
+        secondary=user_workspace,
+        back_populates='users'
+    )
     tasks_owned = relationship("Task", foreign_keys="Task.owner_id")
     tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id")    
     files = relationship("File", back_populates="owner")    
