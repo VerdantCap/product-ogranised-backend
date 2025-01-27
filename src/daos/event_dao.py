@@ -82,7 +82,7 @@ class EventDAO:
         Event.start_at >= start_at, Event.start_at <= end_at
         ).all()
 
-    def get_upcoming(self, workspace_id: str) -> List[Event]:
+    def get_upcoming(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Event]:
         """
         Retrieve upcoming event records by workspace ID.
 
@@ -91,7 +91,7 @@ class EventDAO:
         return self.db.query(Event).filter(
             Event.workspace_id == workspace_id,
             Event.start_at > datetime.now()
-        ).order_by(asc(Event.start_at)).all()
+        ).order_by(asc(Event.start_at)).offset(skip).limit(limit).all()
     
     def get_multi(self, skip: int = 0, limit: int = 100) -> List[Event]:
         """

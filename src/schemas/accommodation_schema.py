@@ -3,7 +3,7 @@ from typing import Optional
 from models.item_model import Item
 from datetime import date, datetime
 
-class AccommodationBase(BaseModel):
+class Accommodation(BaseModel):
     item_id: str
     type: str
     provider: str

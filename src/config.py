@@ -123,6 +123,8 @@ class DevelopConfig(BaseConfig):
     # OTP configuration
     OTP_EXPIRY_MINUTES: int = os.environ.get("OTP_EXPIRY_MINUTES", 30)
 
+    STORAGE_DIR: str = os.environ.get("STORAGE_DIR", "./")
+
 @cache
 def get_settings() -> BaseConfig:
     # Function to retrieve the current configuration settings

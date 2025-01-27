@@ -84,7 +84,7 @@ class ItemDAO:
             Item.deleted_at.is_(None)
         ).offset(skip).limit(limit).all()
 
-    def get_by_space(self, space: ItemSpace, workspace_id: str) -> List[Item]:
+    def get_by_space(self, space: ItemSpace, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
         """
         Retrieve item records by space and workspace ID.
 
@@ -96,7 +96,7 @@ class ItemDAO:
             Item.deleted_at.is_(None)
         ).all()
 
-    def get_by_type(self, type: ItemType, workspace_id: str) -> List[Item]:
+    def get_by_type(self, type: ItemType, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
         """
         Retrieve item records by type and workspace ID.
 
@@ -108,7 +108,7 @@ class ItemDAO:
             Item.deleted_at.is_(None)
         ).all()
 
-    def get_by_status(self, status: ItemStatus, workspace_id: str) -> List[Item]:
+    def get_by_status(self, status: ItemStatus, workspace_id: str, skip: int = 0, limit: int = 100) -> List[Item]:
         """
         Retrieve item records by status and workspace ID.
 
