@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_sso.sso.google import GoogleSSO
-from fastapi_sso.sso.apple import AppleSSO
+# from fastapi_sso.sso.apple import AppleSSO
 
 from schemas.auth_schema import (
     CreateUserIn,
@@ -44,12 +44,12 @@ google_sso = GoogleSSO(
     allow_insecure_http=True  # Only for development
 )
 
-apple_sso = AppleSSO(
-    client_id=settings.APPLE_CLIENT_ID,
-    client_secret=settings.APPLE_CLIENT_SECRET,
-    redirect_uri=settings.APPLE_REDIRECT_URL,
-    allow_insecure_http=True  # Only for development
-)
+# apple_sso = AppleSSO(
+#     client_id=settings.APPLE_CLIENT_ID,
+#     client_secret=settings.APPLE_CLIENT_SECRET,
+#     redirect_uri=settings.APPLE_REDIRECT_URL,
+#     allow_insecure_http=True  # Only for development
+# )
 
 @auth_router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_controller(
@@ -111,10 +111,10 @@ async def google_login(request: Request) -> RedirectResponse:
     return await google_sso.get_login_redirect(request, state="login")
 
 
-@auth_router.get("/apple/login")
-async def apple_login(request: Request) -> RedirectResponse:
-    """Redirect to Apple login page"""
-    return await apple_sso.get_login_redirect(request, state="login")
+# @auth_router.get("/apple/login")
+# async def apple_login(request: Request) -> RedirectResponse:
+#     """Redirect to Apple login page"""
+#     return await apple_sso.get_login_redirect(request, state="login")
 
 # OAuth callback endpoints
 @auth_router.get("/google/callback")
@@ -167,51 +167,51 @@ async def google_callback(
             status_code=status.HTTP_303_SEE_OTHER
         )
 
-@auth_router.post("/apple/callback")
-async def apple_callback(
-    request: Request,
-    auth_service: AuthService = Depends(AuthService)
-) -> RedirectResponse:
-    """Handle Apple OAuth callback"""
-    try:
-        user = await apple_sso.verify_and_process(request)
-        if not user:
-            raise HTTPException(status_code=400, detail="Failed to get user info from Apple")
+# @auth_router.post("/apple/callback")
+# async def apple_callback(
+#     request: Request,
+#     auth_service: AuthService = Depends(AuthService)
+# ) -> RedirectResponse:
+#     """Handle Apple OAuth callback"""
+#     try:
+#         user = await apple_sso.verify_and_process(request)
+#         if not user:
+#             raise HTTPException(status_code=400, detail="Failed to get user info from Apple")
 
-        # Check if the user exists in the database
-        user_exists = await auth_service.auth_dao.check_email_exists(user.email)
+#         # Check if the user exists in the database
+#         user_exists = await auth_service.auth_dao.check_email_exists(user.email)
 
-        if user_exists:
-            access_token = await auth_service.handle_sso_user(
-                email=user.email,
-                name=user.display_name or "",
-                provider="apple",
-                provider_id=user.id,
-                picture=None,  # Apple doesn't provide profile picture
-                is_signup=False
-            )
-        else:
-            access_token = await auth_service.handle_sso_user(
-                email=user.email,
-                name=user.display_name or "",
-                provider="apple",
-                provider_id=user.id,
-                picture=None,  # Apple doesn't provide profile picture
-                is_signup=True
-            )
-            
-        # Redirect to appropriate page based on signup/login
-        redirect_path = "login" if user_exi else "signup"
-        return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/auth/{redirect_path}/callback?access_token={access_token}",
-            status_code=status.HTTP_303_SEE_OTHER
-        )
-    except Exception as e:
-        logger.error(f"Apple callback error: {str(e)}")
-        return RedirectResponse(
-            url=f"{settings.FRONTEND_URL}/auth/error?message={str(e)}",
-            status_code=status.HTTP_303_SEE_OTHER
-        )
+#         if user_exists:
+#             access_token = await auth_service.handle_sso_user(
+#                 email=user.email,
+#                 name=user.display_name or "",
+#                 provider="apple",
+#                 provider_id=user.id,
+#                 picture=None,  # Apple doesn't provide profile picture
+#                 is_signup=False
+#             )
+#         else:
+#             access_token = await auth_service.handle_sso_user(
+#                 email=user.email,
+#                 name=user.display_name or "",
+#                 provider="apple",
+#                 provider_id=user.id,
+#                 picture=None,  # Apple doesn't provide profile picture
+#                 is_signup=True
+#             )
+
+#         # Redirect to appropriate page based on signup/login
+#         redirect_path = "login" if user_exi else "signup"
+#         return RedirectResponse(
+#             url=f"{settings.FRONTEND_URL}/auth/{redirect_path}/callback?access_token={access_token}",
+#             status_code=status.HTTP_303_SEE_OTHER
+#         )
+#     except Exception as e:
+#         logger.error(f"Apple callback error: {str(e)}")
+#         return RedirectResponse(
+#             url=f"{settings.FRONTEND_URL}/auth/error?message={str(e)}",
+#             status_code=status.HTTP_303_SEE_OTHER
+#         )
 
 
 @auth_router.post("/logout", dependencies=[Depends(get_current_user)])

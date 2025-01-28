@@ -7,7 +7,6 @@ from utils.route import APIRouter
 from schemas.workspace_schema import WorkspaceCreate, WorkspaceUpdate
 from daos.workspace_dao import WorkspaceDAO
 from daos.auth_dao import AuthDAO
-from daos.event_dao import EventDAO
 from services.stripe_service import StripeService
 from enums import ItemSpace
 from datetime import datetime
@@ -113,10 +112,10 @@ async def update_workspace(
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
     ):
     workspace = workspace_dao.get_workspace_by_id(workspace_id)
-    if workspace.owner_id != current_user.id or not workspace:
+    if workspace.owner_id != user.id or not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
     else:
-        
+        ### To do
         return workspace_dao.update_workspace(workspace)
 
 
@@ -128,7 +127,7 @@ async def delete_workspace(
     ):
     workspace = workspace_dao.get_workspace_by_id(workspace_id)
 
-    if not workpsace or workspace.owner_id != current_user.id:
+    if not workspace or workspace.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Workspace not found")
     else:
         workspace_dao.delete_workspace(workspace_id=workspace_id)
@@ -195,7 +194,7 @@ async def update_item_space_order(
     workspace = workspace_dao.set_spaces(workspace, order)
     return {"message": "Success", "enabled_spaces": workspace.enabled_spaces_ordered()}
 
-@router.post("/{workspace_id}/spaces/{space}")
+@workspace_router.post("/{workspace_id}/spaces/{space}")
 async def toggle_space(
     workspace_id: str,
     space: ItemSpace,

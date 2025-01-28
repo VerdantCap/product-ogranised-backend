@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Literal
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
-class UserBase(BaseModel):
+class User(BaseModel):
     name: str 
     email: EmailStr
     is_email_verified: bool = False

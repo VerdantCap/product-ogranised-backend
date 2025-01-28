@@ -1,9 +1,9 @@
-from pydantic import BaseModel, field_validator 
-from typing import List
+from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
-
+from enums import ItemSpace
 # Workspace Related Schemas
-class WorkspaceBase(BaseModel):
+class Workspace(BaseModel):
     id: str
     name: str
     owner_id: int
@@ -12,11 +12,6 @@ class WorkspaceBase(BaseModel):
     cancelled_at: Optional[datetime]
     expires_at: Optional[datetime]
     spaces_order: List[ItemSpace]
-    users: List[User]
-    items: List["Item"]
-    files: List["File"]
-    events: List["Event"]
-    tasks: List["Task"]
 
 class WorkspaceCreate(BaseModel):
     name: str

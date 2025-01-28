@@ -25,6 +25,7 @@ from utils.security import PasswordHashing
 from config import settings
 from db.postgres import AsyncSession, get_postgres_session
 from utils.helpers import normalize_email
+from datetime import datetime
 
 # OAuth2 scheme for password-based authentication
 oauth2_scheme = OAuth2PasswordBearer(
@@ -157,73 +158,73 @@ class AuthService:
         await self.auth_dao.delete_user_by_email(user_email)
         await self.auth_dao.db.commit()
 
-    def refresh_google_token(self, user: User):
-        if not user.refresh_token:
-            return None
+    # def refresh_google_token(self, user: User):
+    #     if not user.refresh_token:
+    #         return None
         
-        credentials = Credentials(
-            token = user.access_token,
-            refresh_token = user.refresh_token,
-            token_uri = settings.GOOGLE_TOKEN_URL,
-            client_id = settings.GOOGLE_CLIENT_ID,
-            client_secret = settings.GOOGLE_CLIENT_SECRET,
-        )
+    #     credentials = Credentials(
+    #         token = user.access_token,
+    #         refresh_token = user.refresh_token,
+    #         token_uri = settings.GOOGLE_TOKEN_URL,
+    #         client_id = settings.GOOGLE_CLIENT_ID,
+    #         client_secret = settings.GOOGLE_CLIENT_SECRET,
+    #     )
 
-        if credentials.expired:
-            credentials = credentials.refresh()
-            user_dao.update(
-                user,credentials.token,
-                datetime.utcnow() + timedelta(seconds=credentials.expiry.second)
-            )
+    #     if credentials.expired:
+    #         credentials = credentials.refresh()
+    #         self.auth_dao.update(
+    #             user,credentials.token,
+    #             datetime.utcnow() + timedelta(seconds=credentials.expiry.second)
+    #         )
             
-        return credentials
+    #     return credentials
     
-    def get_google_calendar_events(
-        self,
-        user: User,
-        start_date: datetime,
-        end_date: datetime,
-    ):
-        credentials = self.refresh_google_token(user)
-        if not credentials:
-            return []
+    # def get_google_calendar_events(
+    #     self,
+    #     user: User,
+    #     start_date: datetime,
+    #     end_date: datetime,
+    # ):
+    #     credentials = self.refresh_google_token(user)
+    #     if not credentials:
+    #         return []
 
-        try:
-            service = build(
-                "calendar",
-                "v3",
-                credentials=credentials
-            )
+    #     try:
+    #         service = build(
+    #             "calendar",
+    #             "v3",
+    #             credentials=credentials
+    #         )
 
-            event_result = service.events().list(
-                calendarId="primary",
-                timeMin=start_date.isoformat() + 'Z',
-                timeMax=end_date.isoformat() + 'Z',
-                maxResults=100,
-                singleEvents=True,
-                orderBy="startTime",
-            ).execute()
+    #         event_result = service.events().list(
+    #             calendarId="primary",
+    #             timeMin=start_date.isoformat() + 'Z',
+    #             timeMax=end_date.isoformat() + 'Z',
+    #             maxResults=100,
+    #             singleEvents=True,
+    #             orderBy="startTime",
+    #         ).execute()
 
-            events = event_result.get("items", [])
+    #         events = event_result.get("items", [])
 
-            formatted_events = []
-            for event in events:
-                start = event["start"].get("dateTime", event["start"].get("date"))
-                end = event["end"].get("dateTime", event["end"].get("date"))
-                formatted_event = {
-                    "summary": event["summary"],
-                    "start": start,
-                    "end": end,
-                    "description": event.get("description", ""),
-                    "location": event.get("location", ""),
-                }
-                formatted_events.append(formatted_event)
+    #         formatted_events = []
+    #         for event in events:
+    #             start = event["start"].get("dateTime", event["start"].get("date"))
+    #             end = event["end"].get("dateTime", event["end"].get("date"))
+    #             formatted_event = {
+    #                 "summary": event["summary"],
+    #                 "start": start,
+    #                 "end": end,
+    #                 "description": event.get("description", ""),
+    #                 "location": event.get("location", ""),
+    #             }
+    #             formatted_events.append(formatted_event)
 
-            return formatted_events
+    #         return formatted_events
 
-        except HttpError as e:
-            logger.error(f"An error occurred: {e}")
-            return []
+    #     except HttpError as e:
+    #         logger.error(f"An error occurred: {e}")
+    #         return []
 
     async def refresh_token(self, user_id: str) -> Any:
         """
@@ -376,7 +377,8 @@ async def compose_forgot_pwd_message(
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)]
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: AsyncSession = Depends(get_postgres_session)
 ) -> Dict[str, Any]:
     """
     Retrieve the current user based on the provided token.
@@ -396,11 +398,12 @@ async def get_current_user(
     ):
         logger.warning("Invalid token.")
         raise TokenException(detail="Invalid token.")
-
+    
     user_id = decoded_token["user_id"]
     email = decoded_token["email"]
-    user = await self.auth_dao.get_user(email, user_id)
-    await auth_dao.db.commit()
+    user_dao = AuthDAO(db)
+    user = await user_dao.get_user(email, user_id)
+    await user_dao.db.commit()
 
     if user is None:
         logger.warning("No valid users found in the database.")

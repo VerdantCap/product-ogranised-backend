@@ -1,9 +1,7 @@
 import logging
 from typing import List, Optional
-from fastapi import UploadFile
-from db.postgres import AsyncSession, get_postgres_session
+from fastapi import UploadFile, Depends, HTTPException
 from schemas.file_schema import File, FileCreate, FileUpdate
-from enums import FileType
 from daos.file_dao import FileDAO
 from utils.storage import store_file
 
@@ -28,13 +26,13 @@ class FileService:
     def get_files_by_space(self, space: str, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
         return self.file_dao.get_by_space(space, workspace_id, skip, limit)
 
-    def store_and_create_file(self, file: UploadFile, workspace_id: str) -> File:
+    async def store_and_create_file(self, file: UploadFile, workspace_id: str, item_id: Optional[str]) -> File:
         storage_path = (
             f"workspaces/{workspace_id}/items/{item_id}"
             if item_id
             else f"workspaces/{workspace_id}/files"
         )
-        file_path = await store_file(file)
+        file_path = await store_file(file, storage_path)
         file_data = File(
             workspace_id=workspace_id,
             path=file_path,

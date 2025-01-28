@@ -3,7 +3,8 @@ from typing import Any, Optional, Tuple, List
 from fastapi import Depends
 from models.user_model import User
 from models.workspace_model import Workspace
-from sqlalchemy import and_, delete, exists, select, true, update
+from sqlalchemy import and_, delete, exists, select, or_, update
+from datetime import datetime
 
 from db.postgres import AsyncSession, get_postgres_session
 

@@ -7,7 +7,7 @@ from utils.route import APIRouter
 from daos.auth_dao import AuthDAO
 from daos.event_dao import EventDAO
 from schemas.event_schema import Event, EventCreate, EventUpdate
-from enums import ItemSpace
+# from enums import ItemSpace
 from datetime import datetime
 
 # Create a new API router for event-related endpoints
@@ -55,7 +55,7 @@ async def create_event(
     event_data: EventCreate = Depends(EventCreate),
     ):
     event = Event(
-        **even_data.dict(),
+        **event_data.dict(),
         workspace_id = user.active_workspace_id
     )
     return event_dao.create_event(event)

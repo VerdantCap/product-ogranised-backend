@@ -8,6 +8,9 @@ from db.postgres import AsyncSession, get_postgres_session
 from datetime import datetime
 from enums import ItemSpace, ItemType, ItemStatus  
 
+# Set up a logger for the FileDAO
+logger = logging.getLogger(__name__)
+
 class ItemDAO:
     """
     Data Access Object for Item.
