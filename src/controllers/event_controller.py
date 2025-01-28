@@ -38,13 +38,13 @@ async def list_events(
         for event in local_events
     ]
 
-    if include_google and user.is_oauthed:
-        google_events = await events_dao.get_google_calendar_events(
-            user = user, 
-            start=start, 
-            end= end
-        )
-        events.extend(google_events)
+    # if include_google and user.is_oauthed:
+    #     google_events = await events_dao.get_google_calendar_events(
+    #         user = user, 
+    #         start=start, 
+    #         end= end
+    #     )
+    #     events.extend(google_events)
     
     return events
 

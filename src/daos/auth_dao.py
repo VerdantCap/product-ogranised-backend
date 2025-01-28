@@ -73,14 +73,27 @@ class AuthDAO:
         )
         await self.db.execute(query)
 
-    async def update_user_google_token(self, user: User, access_token: str, expires_at: datetime) -> None:
+    async def update_oauth_tokens(
+        self, 
+        user: User, 
+        access_token: str, 
+        refresh_token: Optional[str],
+        token_expires_at: Optional[datetime]
+    ) -> None:
         """
-        Update the user's password in the database.
+        Update the user's OAuth tokens in the database.
         """
+        values = {
+            "access_token": access_token,
+            "token_expires_at": token_expires_at
+        }
+        if refresh_token:
+            values["refresh_token"] = refresh_token
+
         query = (
             update(User)
             .where(User.id == user.id)
-            .values(access_token=access_token, expires_at=expires_at)
+            .values(**values)
         )
         await self.db.execute(query)
 
@@ -125,16 +138,51 @@ class AuthDAO:
         )
         result: Optional[User] = (await self.db.execute(query)).scalars().first()
         return result
+
+    async def get_user(self, email: str, user_id: str) -> Optional[User]:
+        """
+        Retrieve a user record by both email and user ID.
+        This is used for token validation to ensure both email and ID match.
+        
+        Returns the User object if found, otherwise None.
+        """
+        query = select(User).where(
+            and_(
+                User.email == email,
+                User.id == user_id
+            )
+        )
+        result: Optional[User] = (await self.db.execute(query)).scalars().first()
+        return result
     
     async def get_user_by_google_sub(self, google_sub: str) -> Optional[User]:
         """
         Retrieve a user record by Google subscription ID.
-
         Returns the User object if found, otherwise None.
         """
         query = select(User).where(User.google_sub == google_sub)
         result: Optional[User] = (await self.db.execute(query)).scalars().first()
         return result
+
+    async def get_user_by_apple_sub(self, apple_sub: str) -> Optional[User]:
+        """
+        Retrieve a user record by Apple subscription ID.
+        Returns the User object if found, otherwise None.
+        """
+        query = select(User).where(User.apple_sub == apple_sub)
+        result: Optional[User] = (await self.db.execute(query)).scalars().first()
+        return result
+
+    async def get_user_by_oauth_provider(self, provider: str, sub: str) -> Optional[User]:
+        """
+        Retrieve a user record by OAuth provider and subscription ID.
+        Returns the User object if found, otherwise None.
+        """
+        if provider == "google":
+            return await self.get_user_by_google_sub(sub)
+        elif provider == "apple":
+            return await self.get_user_by_apple_sub(sub)
+        return None
 
     async def get_email_by_user_id(self, user_id: str) -> Optional[str]:
         """
@@ -200,16 +248,25 @@ class AuthDAO:
         )
         return (await self.db.execute(query)).scalar()
     
-    def get_oauthed(self, driver: Optional[str] = None) -> List[User]:
+    async def get_oauth_users(self, provider: Optional[str] = None) -> List[User]:
         """
         Retrieve users with OAuth credentials.
-
         Returns a list of User objects.
         """
-        query = self.db.query(User).filter(User.oauth_id.isnot(None))
-        if driver:
-            query = query.filter(User.oauth_driver == driver)
-        return query.all()
+        conditions = []
+        if provider == "google":
+            conditions.append(User.google_sub.isnot(None))
+        elif provider == "apple":
+            conditions.append(User.apple_sub.isnot(None))
+        else:
+            conditions.append(or_(
+                User.google_sub.isnot(None),
+                User.apple_sub.isnot(None)
+            ))
+        
+        query = select(User).where(and_(*conditions))
+        result = await self.db.execute(query)
+        return result.scalars().all()
 
     def get_multi(self, skip: int = 0, limit: int = 100) -> List[User]:
         """

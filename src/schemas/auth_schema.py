@@ -1,26 +1,39 @@
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
+from typing import Optional, Literal
+from pydantic import BaseModel, ConfigDict, Field, EmailStr
 
 class UserBase(BaseModel):
     name: str 
-    email: str
-    email_verified_at: Optional[datetime]    
-    oauth_id: Optional[str] = None
-    oauth_driver: Optional[str]
-    access_token: Optional[str]
-    refresh_token: Optional[str]
-    access_token_expires_at: Optional[datetime]
-    email_notification: bool
-    sms_notification: bool
-    push_notification: bool
-    active_workspace_id: Optional[str]
+    email: EmailStr
+    is_email_verified: bool = False
+    google_sub: Optional[str] = None
+    apple_sub: Optional[str] = None
+    oauth_provider: Optional[Literal["google", "apple"]] = None
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
+    email_notification: bool = False
+    sms_notification: bool = False
+    push_notification: bool = False
+    active_workspace_id: Optional[str] = None
     
 class CreateUserIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    email: str = Field(..., pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+    email: EmailStr
     password: str = Field(..., min_length=8)
     name: str = Field(..., max_length=100)
+
+class OAuthUserIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    email: EmailStr
+    name: str
+    sub: str
+    provider: Literal["google", "apple"]
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_expires_at: Optional[datetime] = None
 
 class AccessToken(BaseModel):
     access_token: str
