@@ -31,6 +31,11 @@ class CreateUserIn(BaseModel):
     password: str = Field(..., min_length=8)
     name: str = Field(..., max_length=100)
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+
 class OAuthUserIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     email: EmailStr
@@ -289,6 +294,7 @@ class EventUpdate(BaseModel):
 class Task(BaseModel):
     id: str
     workspace_id: str
+    owner_id: str
     assignee_id: str
     title: str
     description: Optional[str]
@@ -298,6 +304,7 @@ class Task(BaseModel):
 
 class TaskCreate(BaseModel):
     workspace_id: str
+    owner_id: str
     assignee_id: str
     title: str
     description: str
@@ -305,6 +312,7 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     workspace_id: str
+    owner_id: str
     assignee_id: str
     title: str
     description: str

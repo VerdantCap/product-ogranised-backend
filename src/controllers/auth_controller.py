@@ -1,17 +1,17 @@
 import logging
 import smtplib
 from typing import Annotated, Optional
-from datetime import datetime, timedelta
+# from datetime import datetime, timedelta
 
 import redis.asyncio as redis
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_sso.sso.google import GoogleSSO
 # from fastapi_sso.sso.apple import AppleSSO
 
 from schemas import (
     CreateUserIn,
+    UserLogin,
     AccessToken,
     ForgotPassword,
     VerifyOtpRequest,
@@ -80,7 +80,7 @@ async def register_controller(
 
 @auth_router.post("/login")
 async def login_controller(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    form_data: UserLogin,
     auth_service: AuthService = Depends(AuthService),
 ) -> AccessToken:
     """
@@ -92,7 +92,7 @@ async def login_controller(
     """
     try:
         access_token = await auth_service.handle_login(
-            form_data.username, form_data.password
+            form_data.email, form_data.password
         )
         return AccessToken(access_token=access_token, token_type="bearer")
     except HTTPException as he:

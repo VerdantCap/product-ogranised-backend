@@ -13,7 +13,8 @@ class Task(Base):
     title: Mapped[str]= mapped_column(String, nullable=False)  
     due_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    completed_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
+    completed_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)
+    owner_id: Mapped[str] = mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))
     assignee_id: Mapped[str]= mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
 
     assignee = relationship("User", back_populates="tasks")  
