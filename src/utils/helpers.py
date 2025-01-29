@@ -77,7 +77,6 @@ async def send_otp_email(email: str, otp: str) -> None:
 
     logger.debug(f"email username: {settings.VERIFICATION_SMTP_USERNAME}")
     logger.debug(f"email password: {settings.VERIFICATION_SMTP_PASSWORD}")
-    logger.debug(f"email body: {body}")
 
     await send_email(
         from_email=settings.VERIFICATION_SMTP_FROM_EMAIL,

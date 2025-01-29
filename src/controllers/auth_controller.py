@@ -55,17 +55,19 @@ google_sso = GoogleSSO(
 async def register_controller(
     user: CreateUserIn,
     auth_service: AuthService = Depends(AuthService),
-) -> ID:
+) -> RedirectResponse:
     """
     Register a new user.
 
-    This function handles user registration by creating a new user in the system.
-
-    Returns the ID of the newly created user.
+    This function handles user registration by creating a new user in the system
+    and redirects to generate verification code.
     """
     try:
         user_id = await auth_service.create_user(user)
-        return ID(id=user_id)
+        return RedirectResponse(
+            url=f"/auth/{user_id}/generate_code?email={user.email}",
+            status_code=status.HTTP_303_SEE_OTHER
+        )
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")
         raise HTTPException(

@@ -17,7 +17,7 @@ class Task(Base):
     owner_id: Mapped[str] = mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))
     assignee_id: Mapped[str]= mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
 
-    assignee = relationship("User", back_populates="tasks")  
+    assignee = relationship("User", foreign_keys=[assignee_id], back_populates="tasks_assigned")
 
     def is_completed(self) -> bool:  
         return self.completed_at is not None  
@@ -54,4 +54,4 @@ class Task(Base):
         """  
         return session.query(cls).filter(  
             (cls.assignee_id == user_id) | (cls.assignee_id == None)  
-        ).all()  
+        ).all()
