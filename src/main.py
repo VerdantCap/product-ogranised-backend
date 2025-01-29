@@ -26,6 +26,21 @@ app.include_router(
         responses={404: {"description": "Not found"}},
     )
 
+
+app.include_router(
+    controllers.event_router,
+    prefix="/event",
+    tags=["event"],
+    responses={404: {"description": "Not found"}},
+)
+
+app.include_router(
+    controllers.item_router,
+    prefix="/item",
+    tags=["item"],
+    responses={404: {"description": "Not found"}},
+)
+
 # Define allowed origins for CORS
 origins = [
     "http://organised.ai",

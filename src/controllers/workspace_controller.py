@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 from models.user_model import User  
 from services.auth_service import get_current_user
 from utils.route import APIRouter
-from schemas.workspace_schema import WorkspaceCreate, WorkspaceUpdate
+from schemas import WorkspaceCreate, WorkspaceUpdate
 from daos.workspace_dao import WorkspaceDAO
 from daos.auth_dao import AuthDAO
 from services.stripe_service import StripeService

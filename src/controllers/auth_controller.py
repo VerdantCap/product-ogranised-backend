@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_sso.sso.google import GoogleSSO
 # from fastapi_sso.sso.apple import AppleSSO
 
-from schemas.auth_schema import (
+from schemas import (
     CreateUserIn,
     AccessToken,
     ForgotPassword,

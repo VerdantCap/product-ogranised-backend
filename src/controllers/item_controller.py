@@ -2,18 +2,18 @@ import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from models.item_model import Item
-from schemas.item_schema import ItemCreate, ItemUpdate
-from schemas.transport_schema import TransportCreate, TransportUpdate
-from schemas.accommodation_schema import AccommodationCreate, AccommodationUpdate
+from schemas import (
+    ItemCreate, ItemUpdate,
+    TransportCreate, TransportUpdate,
+    AccommodationCreate, AccommodationUpdate,
+    User, FileCreate, ExcursionCreate
+)
 from daos.item_dao import ItemDAO
 from daos.transport_dao import TransportDAO
 from daos.excursion_dao import ExcursionDAO
 from services.auth_service import get_current_user
 from utils.route import APIRouter
 from enums import ItemSpace, ItemType, ItemStatus
-from schemas.auth_schema import User
-from schemas.file_schema import FileCreate
-from schemas.excursion_schema import ExcursionCreate
 from utils.storage import store_file
 
 # Create a new API router for item-related endpoints
@@ -92,7 +92,7 @@ async def list_items(
     return item_dao.get_multi(skip, limit)
 
 # Create a new item
-@item_router.post("/create", response_model=Item)
+@item_router.post("/create")
 async def create_item(
     item_data: ItemCreate, 
     user: User = Depends(get_current_user),
@@ -291,4 +291,4 @@ async def remove_related_item(
     if not related_item or related_item.workspace_id != user.active_workspace_id:
         raise HTTPException(status_code=404, detail="Related item not found")
     item.related_items.remove(related_item)
-    item_dao.update_item(item)  
+    item_dao.update_item(item)

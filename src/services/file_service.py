@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
 from fastapi import UploadFile, Depends, HTTPException
-from schemas.file_schema import File, FileCreate, FileUpdate
+from schemas import File, FileCreate, FileUpdate
 from daos.file_dao import FileDAO
 from utils.storage import store_file
 

@@ -3,7 +3,7 @@ from fastapi import Depends
 from typing import Optional, List
 from models.item_model import Item
 from models.file_model import File
-from schemas.file_schema import FileCreate
+from schemas import FileCreate
 from db.postgres import AsyncSession, get_postgres_session
 from datetime import datetime
 from enums import ItemSpace, ItemType, ItemStatus  

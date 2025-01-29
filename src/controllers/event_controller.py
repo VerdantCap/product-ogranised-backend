@@ -6,7 +6,7 @@ from services.auth_service import get_current_user
 from utils.route import APIRouter
 from daos.auth_dao import AuthDAO
 from daos.event_dao import EventDAO
-from schemas.event_schema import Event, EventCreate, EventUpdate
+from schemas import Event, EventCreate, EventUpdate
 # from enums import ItemSpace
 from datetime import datetime
 

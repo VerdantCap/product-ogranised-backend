@@ -20,7 +20,7 @@ from utils.exceptions import (
 )
 from utils.auth_bearer import JWTBearer
 from daos.auth_dao import AuthDAO
-from schemas.auth_schema import CreateUserIn
+from schemas import CreateUserIn
 from utils.security import PasswordHashing
 from config import settings
 from db.postgres import AsyncSession, get_postgres_session
