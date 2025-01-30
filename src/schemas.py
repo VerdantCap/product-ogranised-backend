@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, date
 from typing import Optional, List, Literal
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
-from enums import ItemSpace, ItemType
+from enums import ItemSpace, ItemType, BillingPlan
 
 # Base schemas for common fields
 class TimestampedModel(BaseModel):
@@ -101,8 +101,12 @@ class Workspace(BaseModel):
     spaces_order: List[ItemSpace]
 
 class WorkspaceCreate(BaseModel):
+    user_id: str
+    plan: BillingPlan = BillingPlan.STANDARD
     name: str
     spaces_order: Optional[List[ItemSpace]]
+    success_url: str
+    cancel_url: str
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str]

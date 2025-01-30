@@ -3,6 +3,7 @@ from typing import Any, Optional, Tuple, List
 from fastapi import Depends
 from models.user_model import User
 from models.workspace_model import Workspace
+from models.association_tables import user_workspace
 from sqlalchemy import and_, delete, exists, select, or_, update
 from datetime import datetime
 
@@ -62,6 +63,18 @@ class AuthDAO:
             .values(email=new_email)
         )
         await self.db.execute(query)
+
+    async def verify_user_email(self, user: User) -> None:
+        """
+        Set the user's email as verified in the database.
+        """
+        query = (
+            update(User)
+            .where(User.id == user.id)
+            .values(is_email_verified=True)
+        )
+        await self.db.execute(query)
+        await self.db.commit()
 
     async def update_user_password(self, user: User, new_password: str) -> None:
         """
@@ -277,27 +290,48 @@ class AuthDAO:
         """
         return self.db.query(User).offset(skip).limit(limit).all()
 
-    def join_workspace(self, user: User, workspace: Workspace):  
+    async def join_workspace(self, user: User, workspace: Workspace):  
         """
         Add a user to a workspace.
 
         Commits the change to the database.
         """
-        if workspace not in user.workspaces:  
-            user.workspaces.append(workspace)  
-        self.db.commit()  
+        # Check if the relationship already exists
+        query = select(exists().where(
+            and_(
+                user_workspace.c.user_id == user.id,
+                user_workspace.c.workspace_id == workspace.id
+            )
+        ))
+        result = await self.db.execute(query)
+        already_joined = result.scalar()
 
-    def leave_workspace(self, user: User, workspace: Workspace):  
+        if not already_joined:
+            # Insert the relationship directly using the association table
+            query = user_workspace.insert().values(
+                user_id=user.id,
+                workspace_id=workspace.id
+            )
+            await self.db.execute(query)
+            await self.db.commit()
+
+    async def leave_workspace(self, user: User, workspace: Workspace):  
         """
         Remove a user from a workspace.
 
         Commits the change to the database.
         """
-        if workspace in user.workspaces:  
-            user.workspaces.remove(workspace)  
-        self.db.commit()
+        # Delete the relationship directly from the association table
+        query = delete(user_workspace).where(
+            and_(
+                user_workspace.c.user_id == user.id,
+                user_workspace.c.workspace_id == workspace.id
+            )
+        )
+        await self.db.execute(query)
+        await self.db.commit()
 
-    def set_active_workspace(self,user: User, workspace: Optional[Workspace] = None) -> User:  
+    async def set_active_workspace(self,user: User, workspace: Optional[Workspace] = None) -> User:  
         """
         Set the active workspace for a user.
 
@@ -308,6 +342,7 @@ class AuthDAO:
             .where(User.id == user.id)
             .values(active_workspace_id=workspace.id)
         )
-        self.db.commit()
+        await self.db.execute(query)
+        await self.db.commit()
 
         return user

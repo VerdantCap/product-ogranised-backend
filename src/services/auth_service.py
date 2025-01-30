@@ -404,6 +404,7 @@ async def get_current_user(
     user_dao = AuthDAO(db)
     user = await user_dao.get_user(email, user_id)
     await user_dao.db.commit()
+    logger.info(user)
 
     if user is None:
         logger.warning("No valid users found in the database.")
@@ -411,24 +412,34 @@ async def get_current_user(
             "No valid users found in the database.",
         )
 
-    # Determine authentication method
-    auth_method = "password"
-    if user.google_sub:
-        auth_method = "google"
-    elif user.apple_sub:
-        auth_method = "apple"
+    try:
+        # Refresh the user object to ensure all attributes are loaded
+        await db.refresh(user)
+        
+        # Determine authentication method
+        auth_method = "password"
+        if user.google_sub:
+            auth_method = "google"
+        elif user.apple_sub:
+            auth_method = "apple"
 
-    # Return enhanced user information
-    return {
-        "user_id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "auth_method": auth_method,
-        "is_email_verified": user.is_email_verified,
-        "avatar_url": user.avatar_url,
-        "oauth_provider": user.oauth_provider,
-        "created_at": user.created_at.isoformat() if user.created_at else None,
-    }
+        # Return enhanced user information
+        return {
+            "user_id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "auth_method": auth_method,
+            "is_email_verified": user.is_email_verified,
+            "avatar_url": user.avatar_url,
+            "oauth_provider": user.oauth_provider,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+        }
+    except Exception as e:
+        logger.error(f"Error accessing user attributes: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error accessing user information"
+        )
 
 def decode_token(token: str) -> Any:
     """

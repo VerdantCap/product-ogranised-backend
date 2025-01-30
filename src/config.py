@@ -130,7 +130,7 @@ class DevelopConfig(BaseConfig):
     SMTP_PORT: int = os.environ.get("SMTP_PORT", 587)
 
     # Stripe configuration
-    STRIPE_SECRET: str=""
+    STRIPE_SECRET: str="sk_test_51J5ckGLKZFl6ncHaixymjTvKyhTAY0eB4QMyAcyL1wGhMXyCsNTUUackpFIKVxavzEuEVzfxQVBIJ4bi5LoyRmUh00kOCRCxan"
     STRIPE_WEBHOOK_SECRET: str=""
     STRIPE_HASH: str=""
     STRIPE_PLAN_STANDARD: str=""

@@ -55,18 +55,22 @@ google_sso = GoogleSSO(
 async def register_controller(
     user: CreateUserIn,
     auth_service: AuthService = Depends(AuthService),
-) -> RedirectResponse:
+) -> JSONResponse:
     """
     Register a new user.
 
-    This function handles user registration by creating a new user in the system
-    and redirects to generate verification code.
+    This function handles user registration by creating a new user in the system.
+    Returns user ID and next step URL for generating verification code.
     """
     try:
         user_id = await auth_service.create_user(user)
-        return RedirectResponse(
-            url=f"/auth/{user_id}/generate_code?email={user.email}",
-            status_code=status.HTTP_303_SEE_OTHER
+        return JSONResponse(
+            content={
+                "id": user_id,
+                "next_step": f"/auth/{user_id}/generate_code?email={user.email}",
+                "message": "User created successfully. Please generate verification code."
+            },
+            status_code=status.HTTP_201_CREATED
         )
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")
@@ -291,6 +295,9 @@ async def verify_otp_controller(
         key = user_id
         await verify_otp(key, otp, redis_client)
         logger.info("OTP verification successful")
+        user = await auth_service.auth_dao.get_user_by_id(user_id)
+        await auth_service.auth_dao.verify_user_email(user)
+
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")
         raise HTTPException(

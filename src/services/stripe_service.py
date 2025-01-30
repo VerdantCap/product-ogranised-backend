@@ -1,19 +1,10 @@
 import stripe
-import hmac  
-import hashlib  
-import json    
 from fastapi import HTTPException
 
 from config import settings
 stripe.api_key = settings.STRIPE_SECRET
 
 class StripeService:
-
-    def verify_hash(self, data: dict, provided_hash: str) -> bool:  
-        payload = json.dumps(data).encode('utf-8')  
-        expected_hash = hmac.new(settings.STRIPE_HASH.encode(), payload, hashlib.sha256).hexdigest()  
-        return expected_hash == provided_hash
-
     async def retrieve_stripe_session(self, session_id: str):  
         try:  
             return await stripe.checkout.Session.retrieve(session_id)  
@@ -36,3 +27,26 @@ class StripeService:
         except Exception as e:  
             # Handle exceptions and potentially log them  
             raise ValueError(f"Couldn't create billing portal session: {str(e)}")
+        
+    async def create_funding_session(self, user_id: str, user_email: str, success_url: str, cancel_url: str, plan: str = "") -> str: 
+        try:  
+            session = stripe.checkout.Session.create(
+                customer_email=user_email,  
+                client_reference_id=user_id,  
+                line_items=[  
+                    {  
+                        # "price": STRIPE_PLANS[plan],  # Use plan's Stripe price ID  
+                        "price": "price_1J5cyCLKZFl6ncHarqjPDMBq",
+                        "quantity": 1,  
+                    }  
+                ],  
+                mode="subscription",  
+                success_url=success_url,  
+                cancel_url=cancel_url,  
+            )
+            return session
+        except stripe.error.StripeError as e:
+            raise HTTPException(  
+                status_code=500,  
+                detail=f"There was a problem creating the session: {e.user_message}",  
+            ) 
