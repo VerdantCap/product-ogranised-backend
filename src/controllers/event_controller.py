@@ -6,8 +6,8 @@ from services.auth_service import get_current_user
 from utils.route import APIRouter
 from daos.auth_dao import AuthDAO
 from daos.event_dao import EventDAO
-from schemas.event_schema import Event, EventCreate, EventUpdate
-from enums import ItemSpace
+from schemas import Event, EventCreate, EventUpdate
+# from enums import ItemSpace
 from datetime import datetime
 
 # Create a new API router for event-related endpoints
@@ -38,13 +38,13 @@ async def list_events(
         for event in local_events
     ]
 
-    if include_google and user.is_oauthed:
-        google_events = await events_dao.get_google_calendar_events(
-            user = user, 
-            start=start, 
-            end= end
-        )
-        events.extend(google_events)
+    # if include_google and user.is_oauthed:
+    #     google_events = await events_dao.get_google_calendar_events(
+    #         user = user, 
+    #         start=start, 
+    #         end= end
+    #     )
+    #     events.extend(google_events)
     
     return events
 
@@ -55,7 +55,7 @@ async def create_event(
     event_data: EventCreate = Depends(EventCreate),
     ):
     event = Event(
-        **even_data.dict(),
+        **event_data.dict(),
         workspace_id = user.active_workspace_id
     )
     return event_dao.create_event(event)

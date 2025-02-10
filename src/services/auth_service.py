@@ -20,11 +20,12 @@ from utils.exceptions import (
 )
 from utils.auth_bearer import JWTBearer
 from daos.auth_dao import AuthDAO
-from schemas.auth_schema import CreateUserIn
+from schemas import CreateUserIn
 from utils.security import PasswordHashing
 from config import settings
 from db.postgres import AsyncSession, get_postgres_session
 from utils.helpers import normalize_email
+from datetime import datetime
 
 # OAuth2 scheme for password-based authentication
 oauth2_scheme = OAuth2PasswordBearer(
@@ -157,73 +158,73 @@ class AuthService:
         await self.auth_dao.delete_user_by_email(user_email)
         await self.auth_dao.db.commit()
 
-    def refresh_google_token(self, user: User):
-        if not user.refresh_token:
-            return None
+    # def refresh_google_token(self, user: User):
+    #     if not user.refresh_token:
+    #         return None
         
-        credentials = Credentials(
-            token = user.access_token,
-            refresh_token = user.refresh_token,
-            token_uri = settings.GOOGLE_TOKEN_URL,
-            client_id = settings.GOOGLE_CLIENT_ID,
-            client_secret = settings.GOOGLE_CLIENT_SECRET,
-        )
+    #     credentials = Credentials(
+    #         token = user.access_token,
+    #         refresh_token = user.refresh_token,
+    #         token_uri = settings.GOOGLE_TOKEN_URL,
+    #         client_id = settings.GOOGLE_CLIENT_ID,
+    #         client_secret = settings.GOOGLE_CLIENT_SECRET,
+    #     )
 
-        if credentials.expired:
-            credentials = credentials.refresh()
-            user_dao.update(
-                user,credentials.token,
-                datetime.utcnow() + timedelta(seconds=credentials.expiry.second)
-            )
+    #     if credentials.expired:
+    #         credentials = credentials.refresh()
+    #         self.auth_dao.update(
+    #             user,credentials.token,
+    #             datetime.utcnow() + timedelta(seconds=credentials.expiry.second)
+    #         )
             
-        return credentials
+    #     return credentials
     
-    def get_google_calendar_events(
-        self,
-        user: User,
-        start_date: datetime,
-        end_date: datetime,
-    ):
-        credentials = self.refresh_google_token(user)
-        if not credentials:
-            return []
+    # def get_google_calendar_events(
+    #     self,
+    #     user: User,
+    #     start_date: datetime,
+    #     end_date: datetime,
+    # ):
+    #     credentials = self.refresh_google_token(user)
+    #     if not credentials:
+    #         return []
 
-        try:
-            service = build(
-                "calendar",
-                "v3",
-                credentials=credentials
-            )
+    #     try:
+    #         service = build(
+    #             "calendar",
+    #             "v3",
+    #             credentials=credentials
+    #         )
 
-            event_result = service.events().list(
-                calendarId="primary",
-                timeMin=start_date.isoformat() + 'Z',
-                timeMax=end_date.isoformat() + 'Z',
-                maxResults=100,
-                singleEvents=True,
-                orderBy="startTime",
-            ).execute()
+    #         event_result = service.events().list(
+    #             calendarId="primary",
+    #             timeMin=start_date.isoformat() + 'Z',
+    #             timeMax=end_date.isoformat() + 'Z',
+    #             maxResults=100,
+    #             singleEvents=True,
+    #             orderBy="startTime",
+    #         ).execute()
 
-            events = event_result.get("items", [])
+    #         events = event_result.get("items", [])
 
-            formatted_events = []
-            for event in events:
-                start = event["start"].get("dateTime", event["start"].get("date"))
-                end = event["end"].get("dateTime", event["end"].get("date"))
-                formatted_event = {
-                    "summary": event["summary"],
-                    "start": start,
-                    "end": end,
-                    "description": event.get("description", ""),
-                    "location": event.get("location", ""),
-                }
-                formatted_events.append(formatted_event)
+    #         formatted_events = []
+    #         for event in events:
+    #             start = event["start"].get("dateTime", event["start"].get("date"))
+    #             end = event["end"].get("dateTime", event["end"].get("date"))
+    #             formatted_event = {
+    #                 "summary": event["summary"],
+    #                 "start": start,
+    #                 "end": end,
+    #                 "description": event.get("description", ""),
+    #                 "location": event.get("location", ""),
+    #             }
+    #             formatted_events.append(formatted_event)
 
-            return formatted_events
+    #         return formatted_events
 
-        except HttpError as e:
-            logger.error(f"An error occurred: {e}")
-            return []
+    #     except HttpError as e:
+    #         logger.error(f"An error occurred: {e}")
+    #         return []
 
     async def refresh_token(self, user_id: str) -> Any:
         """
@@ -265,62 +266,70 @@ class AuthService:
             logger.warning(f"No user found with email '{email}'. Password not updated.")
             raise NotFoundException(f"No user found with email '{email}'.")
 
-    async def handle_oidc_login(self, code: str) -> Any:
+    async def handle_sso_user(
+        self,
+        email: str,
+        name: str,
+        provider: str,
+        provider_id: str,
+        picture: Optional[str] = None,
+        is_signup: bool = False
+    ) -> str:
         """
-        Handle OpenID Connect login using an authorization code.
-
-        Returns an access token if login is successful.
+        Handle SSO user from any provider (Google or Apple).
+        Creates or updates user and returns access token.
         """
-        data = {
-            "code": code,
-            "client_id": settings.GOOGLE_CLIENT_ID,
-            "client_secret": settings.GOOGLE_CLIENT_SECRET,
-            "redirect_uri": settings.REDIRECT_URL,
-            "grant_type": "authorization_code",
-        }
+        try:
+            # Try to find existing user
+            user = await self.auth_dao.get_user_by_oauth_provider(provider, provider_id)
+            if not user:
+                user = await self.auth_dao.get_user_by_email(email)
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(settings.GOOGLE_TOKEN_URL, data=data)
-
-            if response.status_code != 200:
-                logger.warning(f"Token exchange failed: {response.text}")
-                raise GoogleAuthException(f"Token exchange failed: {response.text}")
-
-            token_data = response.json()
-
-            id_token = token_data["id_token"]
-
-            custom_google_tokeninfo_url = (
-                f"{settings.GOOGLE_TOKENINFO_URL}?id_token={id_token}"
-            )
-
-            token_info_response = await client.get(custom_google_tokeninfo_url)
-
-            if token_info_response.status_code != 200:
-                logger.warning(
-                    f"Failed to fetch user profile: {token_info_response.text}",
-                )
-                raise GoogleAuthException(
-                    f"Failed to fetch user profile: {token_info_response.text}"
-                )
-
-            profile_data = token_info_response.json()
-
-            google_sub = profile_data["sub"]
-            user = await self.auth_dao.get_user_by_google_sub(google_sub)
-            if user is None:
+            # Handle signup vs login
+            if is_signup:
+                if user:
+                    # If user exists during signup, they should login instead
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Email already registered. Please login instead."
+                    )
+                # Create new user for signup
                 user = User(
-                    email=profile_data["email"],
-                    google_sub=profile_data["sub"],
-                    name=profile_data["name"],
-                    avatar_url=profile_data["picture"],
-                    is_subscribed=True,
+                    id=f"user_{str(uuid.uuid4())}",
+                    email=email,
+                    name=name,
                     is_email_verified=True,
+                    avatar_url=picture
                 )
+            else:  # Login flow
+                if not user:
+                    # If user doesn't exist during login, they should signup
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Account not found. Please signup first."
+                    )
 
+            # Update OAuth fields
+            if provider == "google":
+                user.google_sub = provider_id
+            else:
+                user.apple_sub = provider_id
+
+            user.oauth_provider = provider
+            user.name = name or user.name  # Update name if provided
+            if picture:
+                user.avatar_url = picture
+
+            # Save user
             self.auth_dao.create_user(user)
             await self.auth_dao.db.commit()
+
+            # Generate access token
             return await self.generate_access_token(user)
+
+        except Exception as e:
+            logger.error(f"Error handling SSO user: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"SSO handling failed: {str(e)}")
 
     async def replace_password(
         self, email: str, old_password: str, new_password: str
@@ -369,12 +378,13 @@ async def compose_forgot_pwd_message(
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    db: AsyncSession = Depends(get_postgres_session),
-) -> Optional[Any]:
+    db: AsyncSession = Depends(get_postgres_session)
+) -> Dict[str, Any]:
     """
     Retrieve the current user based on the provided token.
+    Works with both traditional and SSO authentication.
 
-    Returns the decoded token if the user is found.
+    Returns a dictionary containing user information and authentication details.
     """
     if not token:
         raise NotFoundException("User not found.")
@@ -388,20 +398,48 @@ async def get_current_user(
     ):
         logger.warning("Invalid token.")
         raise TokenException(detail="Invalid token.")
-
+    
     user_id = decoded_token["user_id"]
     email = decoded_token["email"]
-
     user_dao = AuthDAO(db)
     user = await user_dao.get_user(email, user_id)
     await user_dao.db.commit()
+    logger.info(user)
 
     if user is None:
         logger.warning("No valid users found in the database.")
         raise NotFoundException(
             "No valid users found in the database.",
         )
-    return decoded_token
+
+    try:
+        # Refresh the user object to ensure all attributes are loaded
+        await db.refresh(user)
+        
+        # Determine authentication method
+        auth_method = "password"
+        if user.google_sub:
+            auth_method = "google"
+        elif user.apple_sub:
+            auth_method = "apple"
+
+        # Return enhanced user information
+        return {
+            "user_id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "auth_method": auth_method,
+            "is_email_verified": user.is_email_verified,
+            "avatar_url": user.avatar_url,
+            "oauth_provider": user.oauth_provider,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+        }
+    except Exception as e:
+        logger.error(f"Error accessing user attributes: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error accessing user information"
+        )
 
 def decode_token(token: str) -> Any:
     """

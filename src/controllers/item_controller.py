@@ -1,18 +1,20 @@
 import logging
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from models.item_model import Item
-from schemas.item_schema import ItemCreate, ItemUpdate
-from schemas.transport_schema import TransportCreate, TransportUpdate
-from schemas.accommodation_schema import AccommodationCreate, AccommodationUpdate
+from schemas import (
+    ItemCreate, ItemUpdate,
+    TransportCreate, TransportUpdate,
+    AccommodationCreate, AccommodationUpdate,
+    User, FileCreate, ExcursionCreate
+)
 from daos.item_dao import ItemDAO
 from daos.transport_dao import TransportDAO
-from daos.accommodation_dao import AccommodationDAO
 from daos.excursion_dao import ExcursionDAO
 from services.auth_service import get_current_user
-from datetime import datetime   
 from utils.route import APIRouter
-from enus import ItemSpace, ItemType, ItemStatus
+from enums import ItemSpace, ItemType, ItemStatus
+from utils.storage import store_file
 
 # Create a new API router for item-related endpoints
 item_router = APIRouter()
@@ -90,7 +92,7 @@ async def list_items(
     return item_dao.get_multi(skip, limit)
 
 # Create a new item
-@item_router.post("/create", response_model=Item)
+@item_router.post("/create")
 async def create_item(
     item_data: ItemCreate, 
     user: User = Depends(get_current_user),
@@ -141,7 +143,7 @@ async def soft_delete_item(
         raise HTTPException(status_code=403, detail="You are not authorized to delete this item")
     return item_dao.soft_delete(item)
 
-@router.post("/{item_id}/upload")
+@item_router.post("/{item_id}/upload")
 async def add_file(
     item_id: str,
     file_data: FileCreate,
@@ -190,8 +192,8 @@ async def update_transport(
     user: User = Depends(get_current_user),
     transport_dao: TransportDAO = Depends(TransportDAO),
     ):
-    tranport = transport_dao.get_by_id(transport_id)
-    if not tranport or tranport.item_id != item_id:
+    transport = transport_dao.get_by_id(transport_id)
+    if not transport or transport.item_id != item_id:
         raise HTTPException(status_code=404, detail="Transport not found")
     if transport.workspace_id != user.active_workspace_id:
         raise HTTPException(status_code=403, detail="You are not authorized to update this transport")
@@ -211,7 +213,7 @@ async def create_accommodation(
         raise HTTPException(status_code=400, detail="Item is not an accommodation")
     return item_dao.create_accommodation(Item(item_id, user.active_workspace_id, **accommodation_data.dict()))
 
-@router.put("/{item_id}/accommdation/{accommodation_id}/update")
+@item_router.put("/{item_id}/accommdation/{accommodation_id}/update")
 async def update_accommodation(
     item_id: str,
     accommodation_id: str,
@@ -232,6 +234,7 @@ async def create_excursion(
     excursion_data: ExcursionCreate,
     user: User = Depends(get_current_user),
     excursion_dao: ExcursionDAO = Depends(ExcursionDAO),
+    item_dao: ItemDAO = Depends(ItemDAO)
     ):
     item = item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
@@ -248,7 +251,7 @@ async def update_excursion(
     user: User = Depends(get_current_user),
     excursion_dao: ExcursionDAO = Depends(ExcursionDAO)
     ):
-    excursuion = excursion_dao.get_by_id(excursion_id)
+    excursion = excursion_dao.get_by_id(excursion_id)
     if not excursion or excursion.item_id != item_id:
         raise HTTPException(status_code=404, detail="Excursion not found")
     if excursion.workspace_id != user.active_workspace_id:
@@ -256,7 +259,7 @@ async def update_excursion(
 
 
 # Related Items Routes
-@router.post("/{item_id}/related/{related_id}")
+@item_router.post("/{item_id}/related/{related_id}")
 async def add_related_item(
     item_id: str,
     related_id: str,
@@ -273,7 +276,7 @@ async def add_related_item(
     item.related_items.append(related_item)
     item_dao.update_item(item)
 
-@router.delete("/{item_id}/related/{related_id}")
+@item_router.delete("/{item_id}/related/{related_id}")
 async def remove_related_item(
     item_id: str,
     related_id: str,
@@ -288,4 +291,4 @@ async def remove_related_item(
     if not related_item or related_item.workspace_id != user.active_workspace_id:
         raise HTTPException(status_code=404, detail="Related item not found")
     item.related_items.remove(related_item)
-    item_dao.update_item(item)  
+    item_dao.update_item(item)

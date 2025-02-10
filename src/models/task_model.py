@@ -9,14 +9,15 @@ class Task(Base):
     __tablename__ = "tasks"  
 
     id: Mapped[str]= mapped_column(String,  primary_key=True, index=True, nullable=False)
-    workspace_id: Mapped[str]= mapped_column(String, ForeignKey('workspace.id', ondelete="CASCADE", onupdate="CASCADE"))
+    workspace_id: Mapped[str]= mapped_column(String, ForeignKey('workspaces.id', ondelete="CASCADE", onupdate="CASCADE"))
     title: Mapped[str]= mapped_column(String, nullable=False)  
     due_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    completed_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
+    completed_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)
+    owner_id: Mapped[str] = mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))
     assignee_id: Mapped[str]= mapped_column(String, ForeignKey('users.id', ondelete="CASCADE", onupdate="CASCADE"))  
 
-    assignee = relationship("User", back_populates="tasks")  
+    assignee = relationship("User", foreign_keys=[assignee_id], back_populates="tasks_assigned")
 
     def is_completed(self) -> bool:  
         return self.completed_at is not None  
@@ -53,4 +54,4 @@ class Task(Base):
         """  
         return session.query(cls).filter(  
             (cls.assignee_id == user_id) | (cls.assignee_id == None)  
-        ).all()  
+        ).all()

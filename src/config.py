@@ -32,13 +32,26 @@ class BaseConfig(BaseSettings):
     STORAGE_ACCOUNT: str = ""
     STORAGE_ACCOUNT_KEY: str = ""
 
-    # Google OIDC configuration
-    GOOGLE_TOKEN_URL: str = ""
-    GOOGLE_AUTH_URL: str = ""
-    GOOGLE_TOKENINFO_URL: str = ""
+    # Frontend URL for OAuth callbacks
+    FRONTEND_URL: str = ""
+
+    # Google OAuth configuration
+    GOOGLE_AUTH_URL: str = "https://accounts.google.com/o/oauth2/v2/auth"
+    GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
+    GOOGLE_TOKENINFO_URL: str = "https://oauth2.googleapis.com/tokeninfo"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    REDIRECT_URL: str = ""
+    GOOGLE_REDIRECT_URL: str = ""
+
+    # Apple OAuth configuration
+    APPLE_AUTH_URL: str = "https://appleid.apple.com/auth/authorize"
+    APPLE_TOKEN_URL: str = "https://appleid.apple.com/auth/token"
+    APPLE_KEYS_URL: str = "https://appleid.apple.com/auth/keys"
+    APPLE_CLIENT_ID: str = ""  # Your App ID/Services ID
+    APPLE_TEAM_ID: str = ""    # Your Team ID
+    APPLE_KEY_ID: str = ""     # Your Key ID
+    APPLE_PRIVATE_KEY: str = "" # Your private key for client secret generation
+    APPLE_REDIRECT_URL: str = ""
 
     # SMTP server configuration
     SMTP_SERVER: str = ""
@@ -92,19 +105,32 @@ class DevelopConfig(BaseConfig):
     STORAGE_ACCOUNT: str = os.environ.get("STORAGE_ACCOUNT", "")
     STORAGE_ACCOUNT_KEY: str = os.environ.get("STORAGE_ACCOUNT_KEY", "")
 
-    # Google OIDC configuration
-    GOOGLE_TOKEN_URL: str = os.environ.get("GOOGLE_TOKEN_URL", "")
-    GOOGLE_AUTH_URL: str = os.environ.get("GOOGLE_AUTH_URL", "")
-    GOOGLE_TOKENINFO_URL: str = os.environ.get("GOOGLE_TOKENINFO_URL", "")
+    # Frontend URL for OAuth callbacks
+    FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+    # Google OAuth configuration
+    GOOGLE_AUTH_URL: str = "https://accounts.google.com/o/oauth2/v2/auth"
+    GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
+    GOOGLE_TOKENINFO_URL: str = "https://oauth2.googleapis.com/tokeninfo"
     GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-    REDIRECT_URL: str = os.environ.get("REDIRECT_URL", "")
+    GOOGLE_REDIRECT_URL: str = os.environ.get("GOOGLE_REDIRECT_URL", "http://localhost:8000/auth/google/callback")
+
+    # Apple OAuth configuration
+    APPLE_AUTH_URL: str = "https://appleid.apple.com/auth/authorize"
+    APPLE_TOKEN_URL: str = "https://appleid.apple.com/auth/token"
+    APPLE_KEYS_URL: str = "https://appleid.apple.com/auth/keys"
+    APPLE_CLIENT_ID: str = os.environ.get("APPLE_CLIENT_ID", "")
+    APPLE_TEAM_ID: str = os.environ.get("APPLE_TEAM_ID", "")
+    APPLE_KEY_ID: str = os.environ.get("APPLE_KEY_ID", "")
+    APPLE_PRIVATE_KEY: str = os.environ.get("APPLE_PRIVATE_KEY", "")
+    APPLE_REDIRECT_URL: str = os.environ.get("APPLE_REDIRECT_URL", "http://localhost:8000/auth/apple/callback")
 
     SMTP_SERVER: str = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT: int = os.environ.get("SMTP_PORT", 587)
 
     # Stripe configuration
-    STRIPE_SECRET: str=""
+    STRIPE_SECRET: str="sk_test_51J5ckGLKZFl6ncHaixymjTvKyhTAY0eB4QMyAcyL1wGhMXyCsNTUUackpFIKVxavzEuEVzfxQVBIJ4bi5LoyRmUh00kOCRCxan"
     STRIPE_WEBHOOK_SECRET: str=""
     STRIPE_HASH: str=""
     STRIPE_PLAN_STANDARD: str=""
