@@ -314,4 +314,6 @@
 - **JWT**: Configured for authentication with `JWT_SECRET` and `JWT_EXPIRY_DAYS`.
 - **OTP**: Configured with `OTP_EXPIRY_MINUTES`.
 
-This document provides a detailed overview of the project's structure, API endpoints, functionalities, and configurations.
+## To Do
+Plz add the opinion about the current structure and something you want.
+this is only basic project...
