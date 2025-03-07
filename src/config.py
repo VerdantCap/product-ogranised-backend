@@ -140,7 +140,7 @@ class DevelopConfig(BaseConfig):
         "VERIFICATION_SMTP_FROM_EMAIL", "support@getorganised.ai"
     )
     VERIFICATION_SMTP_USERNAME: str = os.environ.get("VERIFICATION_SMTP_USERNAME", "bluxking06@gmail.com")
-    VERIFICATION_SMTP_PASSWORD: str = os.environ.get("VERIFICATION_SMTP_PASSWORD", "dhng khot tkst lzuc")
+    VERIFICATION_SMTP_PASSWORD: str = os.environ.get("VERIFICATION_SMTP_PASSWORD", "bepi fass puvj bxrd")
 
     # JWT configuration
     JWT_SECRET: str = os.environ.get("JWT_SECRET", "your-secret-key")

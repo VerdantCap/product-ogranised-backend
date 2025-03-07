@@ -1,7 +1,7 @@
 import logging
 from fastapi import Depends
 from typing import List
-from models.transpot_model import Transport
+from models.transport_model import Transport
 from db.postgres import AsyncSession, get_postgres_session
 
 # Set up a logger for the TransportDAO

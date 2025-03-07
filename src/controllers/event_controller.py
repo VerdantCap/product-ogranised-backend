@@ -16,7 +16,7 @@ event_router = APIRouter()
 # Set up a logger for the event controller
 logger = logging.getLogger(__name__)
 
-@event_router.get("/list")
+@event_router.get("/")
 async def list_events(
     user: User = Depends(get_current_user),
     events_dao: EventDAO= Depends(EventDAO),
@@ -101,6 +101,33 @@ async def delete_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     return event_dao.delete_event(event)
+
+@event_router.get("/date/{date}")
+async def get_events_by_date(
+    date: str,
+    user: User = Depends(get_current_user),
+    event_dao: EventDAO= Depends(EventDAO),
+    ):
+    # Convert date string to datetime objects for start and end of day
+    try:
+        date_obj = datetime.strptime(date, "%Y-%m-%d")
+        start = datetime(date_obj.year, date_obj.month, date_obj.day, 0, 0, 0)
+        end = datetime(date_obj.year, date_obj.month, date_obj.day, 23, 59, 59)
+        
+        events = await event_dao.get_by_date_range(user.active_workspace_id, start, end)
+        return [
+            {
+                "id": str(event.id),
+                "name": event.name,
+                "description": event.description,
+                "start_at": event.start_at,
+                "end_at": event.end_at,
+                "source": "local",
+            }
+            for event in events
+        ]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
 @event_router.get("/upcoming")
 async def get_upcoming_events(

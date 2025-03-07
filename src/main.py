@@ -26,18 +26,67 @@ app.include_router(
         responses={404: {"description": "Not found"}},
     )
 
-
+# Include the event router
 app.include_router(
     controllers.event_router,
-    prefix="/event",
+    prefix="/events",  # Changed from /event to /events to match frontend
     tags=["event"],
     responses={404: {"description": "Not found"}},
 )
 
+# Include the item router
 app.include_router(
     controllers.item_router,
     prefix="/item",
     tags=["item"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the task router
+app.include_router(
+    controllers.task_router,
+    prefix="/tasks",
+    tags=["task"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the accommodation router
+app.include_router(
+    controllers.accommodation_router,
+    prefix="/accommodation",
+    tags=["accommodation"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the excursion router
+app.include_router(
+    controllers.excursion_router,
+    prefix="/excursion",
+    tags=["excursion"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the transport router
+app.include_router(
+    controllers.transport_router,
+    prefix="/transport",
+    tags=["transport"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the file router
+app.include_router(
+    controllers.file_router,
+    prefix="/files",
+    tags=["file"],
+    responses={404: {"description": "Not found"}},
+)
+
+# Include the activity router
+app.include_router(
+    controllers.activity_router,
+    prefix="/activities",
+    tags=["activity"],
     responses={404: {"description": "Not found"}},
 )
 

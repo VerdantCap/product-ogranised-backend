@@ -283,7 +283,7 @@ async def verify_otp_controller(
     otp: str,
     redis_client: redis.StrictRedis = Depends(redis_context),
     auth_service: AuthService = Depends(AuthService),
-) -> None:
+) -> AccessToken:
     """
     Verify one-time password.
 
@@ -297,6 +297,10 @@ async def verify_otp_controller(
         logger.info("OTP verification successful")
         user = await auth_service.auth_dao.get_user_by_id(user_id)
         await auth_service.auth_dao.verify_user_email(user)
+        await auth_service.auth_dao.refresh_database()
+
+        access_token = auth_service.generate_access_token(user)
+        return AccessToken(access_token=access_token, token_type="bear")
 
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")

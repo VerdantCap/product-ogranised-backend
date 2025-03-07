@@ -130,6 +130,12 @@ class FileCreate(BaseModel):
     folder: Optional[str] = None
     category: Optional[str] = None
 
+class FileUpdate(BaseModel):
+    path: Optional[str] = None
+    type: Optional[str] = None
+    folder: Optional[str] = None
+    category: Optional[str] = None
+
 # Item related schemas
 class Item(BaseModel):
     workspace_id: str
@@ -322,3 +328,14 @@ class TaskUpdate(BaseModel):
     description: str
     due_at: Optional[datetime]
     completed_at: Optional[datetime]
+
+class TaskResponse(BaseModel):
+    id: str
+    workspace_id: str
+    owner_id: str
+    assignee_id: str
+    title: str
+    description: Optional[str]
+    due_at: Optional[datetime]
+    completed_at: Optional[datetime]
+    assignee: Optional[User]

@@ -346,3 +346,25 @@ class AuthDAO:
         await self.db.commit()
 
         return user
+        
+    async def refresh_database(self, user: Optional[User] = None) -> None:
+        """
+        Refresh the database session to ensure it has the latest data.
+        
+        If a user object is provided, refreshes that specific user object.
+        Otherwise, just refreshes the database session.
+        
+        This is useful when data might have been modified by another session
+        or when you need to ensure you have the latest state from the database.
+        """
+        try:
+            if user:
+                await self.db.refresh(user)
+                logger.info(f"Refreshed user data for user ID: {user.id}")
+            else:
+                # Just refresh the session
+                await self.db.flush()
+                logger.info("Database session refreshed")
+        except Exception as e:
+            logger.error(f"Error refreshing database: {e}")
+            raise

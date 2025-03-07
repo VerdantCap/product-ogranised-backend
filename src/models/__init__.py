@@ -6,7 +6,7 @@ from models.excursion_model import Excursion
 from models.file_model import File
 from models.item_model import Item
 from models.task_model import Task
-from models.transpot_model import Transport
+from models.transport_model import Transport
 from models.workspace_model import Workspace
 
 __all__ = [
