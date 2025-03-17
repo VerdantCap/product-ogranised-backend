@@ -31,6 +31,16 @@ class BaseConfig(BaseSettings):
     # Storage account configuration
     STORAGE_ACCOUNT: str = ""
     STORAGE_ACCOUNT_KEY: str = ""
+    
+    # S3/MinIO configuration
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_KEY: str = ""
+    S3_ENDPOINT_URL: str = ""
+    S3_PUBLIC_BUCKET: str = ""
+    S3_FILES_BUCKET_NAME: str = ""
+    MINIO_API_PORT_NUMBER: int = 9000
+    MINIO_CONSOLE_PORT_NUMBER: int = 9001
+    USE_S3_STORAGE: bool = False
 
     # Frontend URL for OAuth callbacks
     FRONTEND_URL: str = ""
@@ -104,6 +114,16 @@ class DevelopConfig(BaseConfig):
 
     STORAGE_ACCOUNT: str = os.environ.get("STORAGE_ACCOUNT", "")
     STORAGE_ACCOUNT_KEY: str = os.environ.get("STORAGE_ACCOUNT_KEY", "")
+    
+    # S3/MinIO configuration
+    AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "minio")
+    AWS_SECRET_KEY: str = os.environ.get("AWS_SECRET_KEY", "minio123")
+    S3_ENDPOINT_URL: str = os.environ.get("S3_ENDPOINT_URL", "http://minio:9000")
+    S3_PUBLIC_BUCKET: str = os.environ.get("S3_PUBLIC_BUCKET", "public")
+    S3_FILES_BUCKET_NAME: str = os.environ.get("S3_FILES_BUCKET_NAME", "files")
+    MINIO_API_PORT_NUMBER: int = int(os.environ.get("MINIO_API_PORT_NUMBER", 9000))
+    MINIO_CONSOLE_PORT_NUMBER: int = int(os.environ.get("MINIO_CONSOLE_PORT_NUMBER", 9001))
+    USE_S3_STORAGE: bool = os.environ.get("USE_S3_STORAGE", "True").lower() == "true"
 
     # Frontend URL for OAuth callbacks
     FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:3000")

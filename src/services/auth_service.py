@@ -116,16 +116,14 @@ class AuthService:
 
         Returns the generated JWT token.
         """
-        profile = dict(
-            avatar_url=user.avatar_url,
-            name=user.name,
-            country=user.country,
-            city=user.city,
-        )
+        # Ensure user attributes are loaded before accessing them
+        await self.auth_dao.db.refresh(user)
+        
         payload: Dict[str, Any] = {
             "user_id": user.id,
             "email": user.email
         }
+        logger.info(payload)
         jwt_expiry_minutes = settings.JWT_EXPIRY_DAYS * 24 * 60
         jwt_token: str = JWTBearer.generate_jwt(
             payload=payload, expiry_minutes=jwt_expiry_minutes

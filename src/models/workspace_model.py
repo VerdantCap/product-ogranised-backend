@@ -25,3 +25,4 @@ class Workspace(Base):
     )
     event = relationship("Event", back_populates="workspace")
     items = relationship("Item", back_populates="workspace")
+    activities = relationship("Activity", back_populates="workspace")

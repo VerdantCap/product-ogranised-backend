@@ -30,6 +30,7 @@ async def create_workspace(
     """
     Create a new workspace.
     """
+    logger.info(data)
     if data.user_id != user["user_id"]:  
         raise HTTPException(status_code=401, detail="Unauthorized")  
 
@@ -227,20 +228,6 @@ async def cancel_subscription(
         raise HTTPException(status_code=404, detail="Workspace not found")
     
     return await workspace_dao.cancel_subscription(workspace, expires_at)
-
-@workspace_router.post("/{workspace_id}/set-active")
-async def set_active_workspace(
-    workspace_id: str,
-    user: User = Depends(get_current_user),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-    auth_dao: AuthDAO = Depends(AuthDAO)
-    ):
-    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
-    if not workspace or workspace.owner_id != user["user_id"]:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    return await auth_dao.set_active_workspace(user, workspace)
-
 
 
 @workspace_router.get("/{workspace_id}/members")

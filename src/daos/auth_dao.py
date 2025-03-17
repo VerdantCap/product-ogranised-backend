@@ -331,22 +331,6 @@ class AuthDAO:
         await self.db.execute(query)
         await self.db.commit()
 
-    async def set_active_workspace(self,user: User, workspace: Optional[Workspace] = None) -> User:  
-        """
-        Set the active workspace for a user.
-
-        Commits the change to the database.
-        """
-        query = (
-            update(User)
-            .where(User.id == user.id)
-            .values(active_workspace_id=workspace.id)
-        )
-        await self.db.execute(query)
-        await self.db.commit()
-
-        return user
-        
     async def refresh_database(self, user: Optional[User] = None) -> None:
         """
         Refresh the database session to ensure it has the latest data.

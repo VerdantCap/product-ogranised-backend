@@ -27,7 +27,6 @@ class User(Base):
     email_notification: Mapped[bool]= mapped_column(Boolean, default=False)  
     sms_notification: Mapped[bool]= mapped_column(Boolean, default=False)  
     push_notification: Mapped[bool]= mapped_column(Boolean, default=False)
-    active_workspace_id: Mapped[str] = mapped_column(String, ForeignKey('workspaces.id'), nullable=True)
 
     workspaces = relationship(
         'Workspace',
@@ -35,9 +34,10 @@ class User(Base):
         back_populates='users'
     )
     tasks_owned = relationship("Task", foreign_keys="Task.owner_id")
-    tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id")    
-    files = relationship("File", back_populates="owner")    
+    tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id")
+    files = relationship("File", back_populates="owner")
     items = relationship("Item", back_populates="owner")
+    activities = relationship("Activity", back_populates="user")
 
     @hybrid_property
     def is_oauthed(self) -> bool:

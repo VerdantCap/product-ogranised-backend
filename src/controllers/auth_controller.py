@@ -298,8 +298,7 @@ async def verify_otp_controller(
         user = await auth_service.auth_dao.get_user_by_id(user_id)
         await auth_service.auth_dao.verify_user_email(user)
         await auth_service.auth_dao.refresh_database()
-
-        access_token = auth_service.generate_access_token(user)
+        access_token = await auth_service.generate_access_token(user)
         return AccessToken(access_token=access_token, token_type="bear")
 
     except HTTPException as he:
@@ -433,6 +432,30 @@ async def replace_password_controller(
         )
     except Exception as e:
         logger.error(f"An error occurred while updating password: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@auth_router.get("/me")
+async def get_current_user_controller(
+    user_info: dict = Depends(get_current_user)
+) -> JSONResponse:
+    """
+    Get current user information.
+    
+    This endpoint returns the information of the currently authenticated user.
+    
+    Returns a JSON response containing the user's information.
+    """
+    try:
+        logger.info("Getting current user information")
+        return JSONResponse(content=user_info, status_code=status.HTTP_200_OK)
+    except HTTPException as he:
+        logger.error(f"{he.detail}: {he}")
+        raise HTTPException(
+            status_code=he.status_code, detail=he.detail, headers=he.headers
+        )
+    except Exception as e:
+        logger.error(f"An error occurred while getting user information: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 

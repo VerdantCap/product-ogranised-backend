@@ -288,18 +288,21 @@ class Event(BaseModel):
     description: Optional[str]
     start_at: str
     end_at: str
+    lead: Optional[str] = None
 
 class EventCreate(BaseModel):
     name: str
     description: Optional[str]
     start_at: str
     end_at: str
+    lead: Optional[str] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str]
     description: Optional[str]
     start_at: Optional[str]
     end_at: Optional[str]
+    lead: Optional[str]
 
 class Task(BaseModel):
     id: str
@@ -339,3 +342,32 @@ class TaskResponse(BaseModel):
     due_at: Optional[datetime]
     completed_at: Optional[datetime]
     assignee: Optional[User]
+
+# Activity related schemas
+class Activity(BaseModel):
+    type: str
+    entity_id: Optional[str] = None
+    entity_type: Optional[str] = None
+    details: Optional[dict] = None
+
+class ActivityCreate(Activity):
+    activity_type: str
+    entity_id: Optional[str] = None
+    entity_type: Optional[str] = None
+    details: Optional[dict] = None
+
+class ActivityUpdate(Activity):
+    pass
+
+class ActivityResponse(Activity):
+    id: str
+    user_id: str
+    workspace_id: str
+    type: str
+    entity_id: Optional[str] = None
+    entity_type: Optional[str] = None
+    details: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

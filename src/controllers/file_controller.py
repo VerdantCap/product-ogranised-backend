@@ -18,7 +18,7 @@ file_router = APIRouter()
 # Set up a logger for the file controller
 logger = logging.getLogger(__name__)
 
-@file_router.get("/list")
+@file_router.get("/")
 async def list_files(
     skip: int = Query(0, description="Skip files"),
     limit: int = Query(100, description="Limit files"),
@@ -68,6 +68,21 @@ async def get_file(
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
     return file
+
+@file_router.get("/{file_id}/url")
+async def get_file_url(
+    file_id: str,
+    user: User = Depends(get_current_user),
+    file_service: FileService = Depends(FileService),
+):
+    """
+    Get the URL for a specific file.
+    """
+    workspace_id = user.active_workspace_id
+    url = file_service.get_file_url(file_id, workspace_id)
+    if not url:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"url": url}
 
 @file_router.post("/upload")
 async def upload_file(

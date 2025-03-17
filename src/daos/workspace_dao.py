@@ -180,3 +180,28 @@ class WorkspaceDAO:
         await self.db.commit()
         await self.db.refresh(workspace)
         return workspace
+        
+    async def get_workspaces_by_user_id(self, user_id: str) -> List[Workspace]:
+        """
+        Retrieve all workspaces associated with a user.
+        
+        This includes workspaces where the user is an owner or a member.
+        Returns a list of Workspace objects.
+        """
+        # Query workspaces where the user is a member (through user_workspace association)
+        query = (
+            select(Workspace)
+            .join(user_workspace, Workspace.id == user_workspace.c.workspace_id)
+            .where(user_workspace.c.user_id == user_id)
+        )
+        result = await self.db.execute(query)
+        member_workspaces = result.scalars().all()
+        
+        # Query workspaces where the user is the owner
+        owner_query = select(Workspace).where(Workspace.owner_id == user_id)
+        owner_result = await self.db.execute(owner_query)
+        owner_workspaces = owner_result.scalars().all()
+        
+        # Combine and deduplicate results
+        all_workspaces = list(set(member_workspaces + owner_workspaces))
+        return all_workspaces
