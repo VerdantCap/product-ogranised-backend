@@ -28,7 +28,7 @@ async def list_files(
     """
     Get all files with pagination.
     """
-    return file_dao.get_multi(skip, limit)
+    return await file_dao.get_multi(skip, limit)
 
 @file_router.get("/by-workspace/{workspace_id}")
 async def get_files_by_workspace(
@@ -41,7 +41,7 @@ async def get_files_by_workspace(
     """
     Get files by workspace ID.
     """
-    return file_dao.get_by_workspace(workspace_id, skip, limit)
+    return await file_dao.get_by_workspace(workspace_id, skip, limit)
 
 @file_router.get("/by-category/{category}")
 async def get_files_by_category(
@@ -53,7 +53,7 @@ async def get_files_by_category(
     """
     Get files by category and workspace ID.
     """
-    return file_dao.get_by_category(category, workspace_id)
+    return await file_dao.get_by_category(category, workspace_id)
 
 @file_router.get("/{file_id}")
 async def get_file(
@@ -64,7 +64,7 @@ async def get_file(
     """
     Get a specific file by ID.
     """
-    file = file_dao.get_by_id(file_id)
+    file = await file_dao.get_by_id(file_id)
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
     return file
@@ -79,7 +79,7 @@ async def get_file_url(
     Get the URL for a specific file.
     """
     workspace_id = user.active_workspace_id
-    url = file_service.get_file_url(file_id, workspace_id)
+    url = await file_service.get_file_url(file_id, workspace_id)
     if not url:
         raise HTTPException(status_code=404, detail="File not found")
     return {"url": url}

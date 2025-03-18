@@ -12,13 +12,13 @@ class FileService:
     def __init__(self, file_dao: FileDAO = Depends(FileDAO) ):
         self.file_dao = file_dao
 
-    def get_file(self, file_id: str, workspace_id: str) -> Optional[File]:
-        file = self.file_dao.get_by_id(file_id)
+    async def get_file(self, file_id: str, workspace_id: str) -> Optional[File]:
+        file = await self.file_dao.get_by_id(file_id)
         if not file or file.workspace_id != workspace_id:
             return None
         return file
 
-    def get_file_url(self, file_id: str, workspace_id: str) -> Optional[str]:
+    async def get_file_url(self, file_id: str, workspace_id: str) -> Optional[str]:
         """
         Get the URL for a file.
         
@@ -29,7 +29,7 @@ class FileService:
         Returns:
             str: The URL to access the file, or None if the file doesn't exist
         """
-        file = self.get_file(file_id, workspace_id)
+        file = await self.get_file(file_id, workspace_id)
         if not file:
             return None
         
@@ -40,14 +40,15 @@ class FileService:
         # Otherwise, construct a URL to the local file
         return f"/files/{file.id}"
 
-    def get_files_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
-        return self.file_dao.get_by_workspace(workspace_id, skip, limit)
+    async def get_files_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
+        return await self.file_dao.get_by_workspace(workspace_id, skip, limit)
 
-    def get_files_by_category(self, category: str, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
-        return self.file_dao.get_by_category(category, workspace_id, skip, limit)
+    async def get_files_by_category(self, category: str, workspace_id: str) -> List[File]:
+        return await self.file_dao.get_by_category(category, workspace_id)
 
-    def get_files_by_space(self, space: str, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
-        return self.file_dao.get_by_space(space, workspace_id, skip, limit)
+    async def get_files_by_space(self, space: str, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
+        # This method needs to be implemented in the DAO or removed if not used
+        raise NotImplementedError("get_by_space method not implemented in FileDAO")
 
     async def store_and_create_file(self, file: UploadFile, workspace_id: str, item_id: Optional[str]) -> File:
         storage_path = (
@@ -62,20 +63,21 @@ class FileService:
             type=file.content_type,
             name=file.filename,
         )
-        return self.file_dao.create(file_data)
+        return await self.file_dao.create_file(file_data)
 
     async def create_file(self, file_data: FileCreate) -> File:
         return await self.store_and_create_file(file_data.file, file_data.workspace_id)
 
     async def update_file(self, file_id: str, file_data: FileUpdate) -> File:
-        file = self.file_dao.get_by_id(file_id)
+        file = await self.file_dao.get_by_id(file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-        file_data = File(**file_data.dict(exclude_unset=True))
-        return self.file_dao.update(file, file_data)
+        for key, value in file_data.dict(exclude_unset=True).items():
+            setattr(file, key, value)
+        return await self.file_dao.update_file(file)
 
     async def delete_file(self, file_id: str):
-        file = self.file_dao.get_by_id(file_id)
+        file = await self.file_dao.get_by_id(file_id)
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
         
@@ -83,4 +85,4 @@ class FileService:
         delete_file(file.path)
         
         # Delete the file record from the database
-        return self.file_dao.delete(file)
+        return await self.file_dao.delete_file(file)

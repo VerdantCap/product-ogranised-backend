@@ -1,6 +1,7 @@
 import logging
 from fastapi import Depends
 from typing import List
+from sqlalchemy import select
 from models.file_model import File
 from db.postgres import AsyncSession, get_postgres_session
 
@@ -21,70 +22,74 @@ class FileDAO:
         # Initialize the DAO with a database session
         self.db = db
 
-    def create_file(self, file: File):
+    async def create_file(self, file: File):
         """
         Create a new file record in the database.
 
         Returns the created File object.
         """
         self.db.add(file)
-        self.db.commit()
-        self.db.refresh(file)
+        await self.db.commit()
+        await self.db.refresh(file)
         return file
 
-    def update_file(self, file: File):
+    async def update_file(self, file: File):
         """
         Update an existing file record in the database.
 
         Returns the updated File object.
         """
         self.db.add(file)
-        self.db.commit()
-        self.db.refresh(file)
+        await self.db.commit()
+        await self.db.refresh(file)
         return file
 
-    def delete_file(self, file: File):
+    async def delete_file(self, file: File):
         """
         Delete a file record from the database.
         """
         self.db.delete(file)
-        self.db.commit()
+        await self.db.commit()
 
-    def get_by_id(self, file_id: str) -> File:
+    async def get_by_id(self, file_id: str) -> File:
         """
         Retrieve a file record by its ID.
 
         Returns the File object if found, otherwise None.
         """
-        return self.db.query(File).filter(
-            File.id == file_id
-        ).first()
+        query = select(File).where(File.id == file_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
 
-    def get_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
+    async def get_by_workspace(self, workspace_id: str, skip: int = 0, limit: int = 100) -> List[File]:
         """
         Retrieve file records by workspace ID with pagination.
 
         Returns a list of File objects.
         """
-        return self.db.query(File).filter(
-            File.workspace_id == workspace_id
-        ).offset(skip).limit(limit).all()
+        query = select(File).where(File.workspace_id == workspace_id).offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        return result.scalars().all()
 
-    def get_by_category(self, category: str, workspace_id: str) -> List[File]:
+    async def get_by_category(self, category: str, workspace_id: str) -> List[File]:
         """
         Retrieve file records by category and workspace ID.
 
         Returns a list of File objects.
         """
-        return self.db.query(File).filter(
+        query = select(File).where(
             File.category == category,
             File.workspace_id == workspace_id
-        ).all()
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
     
-    def get_multi(self, skip: int = 0, limit: int = 100) -> List[File]:
+    async def get_multi(self, skip: int = 0, limit: int = 100) -> List[File]:
         """
         Retrieve multiple file records with pagination.
 
         Returns a list of File objects.
         """
-        return self.db.query(File).offset(skip).limit(limit).all()
+        query = select(File).offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        return result.scalars().all()
