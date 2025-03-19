@@ -1,10 +1,10 @@
 import logging
 from fastapi import Depends
-from typing import List, Optional
-from sqlalchemy import or_, select
-from models.task_model import Task
+from typing import List, Optional, Dict, Any
+from sqlalchemy import or_, select, and_, func
+from models.task_model import Task, TaskPriority, TaskStatus, TaskType
 from db.postgres import AsyncSession, get_postgres_session
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Set up a logger for the TaskDAO
 logger = logging.getLogger(__name__)
@@ -83,7 +83,8 @@ class TaskDAO:
         """
         query = select(Task).where(
             Task.workspace_id == workspace_id,
-            Task.completed_at.is_(None)
+            Task.completed_at.is_(None),
+            Task.status != TaskStatus.COMPLETED
         )
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -114,28 +115,6 @@ class TaskDAO:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def complete_task(self, task: Task) -> Task:
-        """
-        Mark a task as completed by setting its completed_at timestamp.
-
-        Returns the updated Task object.
-        """
-        task.completed_at = datetime.now()
-        await self.db.commit()
-        await self.db.refresh(task)
-        return task
-
-    async def reset_task(self, task: Task) -> Task:
-        """
-        Reset a task's completion status by clearing its completed_at timestamp.
-
-        Returns the updated Task object.
-        """
-        task.completed_at = None
-        await self.db.commit()
-        await self.db.refresh(task)
-        return task
-    
     async def get_by_completion_status(self, workspace_id: str, completed: bool) -> List[Task]:
         """
         Retrieve tasks by completion status in a workspace.
@@ -171,14 +150,14 @@ class TaskDAO:
 
         Returns a list of Task objects ordered by due date.
         """
-        from datetime import timedelta
         future_date = datetime.now() + timedelta(days=days)
         query = select(Task).where(
             Task.workspace_id == workspace_id,
             Task.due_at.isnot(None),
             Task.due_at <= future_date,
             Task.due_at > datetime.now(),
-            Task.completed_at.is_(None)
+            Task.completed_at.is_(None),
+            Task.status != TaskStatus.COMPLETED
         ).order_by(Task.due_at).limit(limit)
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -193,29 +172,109 @@ class TaskDAO:
             Task.workspace_id == workspace_id,
             Task.due_at.isnot(None),
             Task.due_at < datetime.now(),
-            Task.completed_at.is_(None)
+            Task.completed_at.is_(None),
+            Task.status != TaskStatus.COMPLETED
         ).order_by(Task.due_at).limit(limit)
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def complete_task(self, task: Task) -> Task:
+    async def get_by_priority(self, workspace_id: str, priority: TaskPriority) -> List[Task]:
         """
-        Mark a task as completed by setting its completed_at timestamp.
+        Retrieve tasks by priority in a workspace.
 
-        Returns the updated Task object.
+        Returns a list of Task objects.
         """
-        task.completed_at = datetime.now()
-        await self.db.commit()
-        await self.db.refresh(task)
-        return task
+        query = select(Task).where(
+            Task.workspace_id == workspace_id,
+            Task.priority == priority
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
     
-    async def uncomplete_task(self, task: Task) -> Task:
+    async def get_by_status(self, workspace_id: str, status: TaskStatus) -> List[Task]:
         """
-        Unmark a task's completion status by clearing its completed_at timestamp.
+        Retrieve tasks by status in a workspace.
 
-        Returns the updated Task object.
+        Returns a list of Task objects.
         """
-        task.completed_at = None
-        await self.db.commit()
-        await self.db.refresh(task)
-        return task
+        query = select(Task).where(
+            Task.workspace_id == workspace_id,
+            Task.status == status
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def get_by_type(self, workspace_id: str, task_type: TaskType) -> List[Task]:
+        """
+        Retrieve tasks by type in a workspace.
+
+        Returns a list of Task objects.
+        """
+        query = select(Task).where(
+            Task.workspace_id == workspace_id,
+            Task.type == task_type
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def get_subtasks(self, parent_id: str) -> List[Task]:
+        """
+        Retrieve subtasks for a given parent task.
+
+        Returns a list of Task objects.
+        """
+        query = select(Task).where(Task.parent_id == parent_id)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def get_by_tags(self, workspace_id: str, tags: List[str]) -> List[Task]:
+        """
+        Retrieve tasks that have any of the specified tags.
+
+        Returns a list of Task objects.
+        """
+        # This is a simplified implementation since JSONB array operations are complex in SQLAlchemy
+        # For a production system, you might want to use a raw SQL query with JSONB operators
+        tasks = await self.get_by_workspace(workspace_id)
+        return [task for task in tasks if task.tags and any(tag in task.tags for tag in tags)]
+    
+    async def get_by_date_range(self, workspace_id: str, start_date: datetime, end_date: datetime) -> List[Task]:
+        """
+        Retrieve tasks with due dates within a specified range.
+
+        Returns a list of Task objects.
+        """
+        query = select(Task).where(
+            Task.workspace_id == workspace_id,
+            Task.due_at.isnot(None),
+            Task.due_at >= start_date,
+            Task.due_at <= end_date
+        ).order_by(Task.due_at)
+        result = await self.db.execute(query)
+        return result.scalars().all()
+    
+    async def get_task_counts_by_status(self, workspace_id: str) -> Dict[str, int]:
+        """
+        Get counts of tasks grouped by status.
+
+        Returns a dictionary with status as key and count as value.
+        """
+        # This would be more efficient with a direct SQL query using GROUP BY
+        tasks = await self.get_by_workspace(workspace_id)
+        counts = {}
+        for status in TaskStatus:
+            counts[status.value] = len([t for t in tasks if t.status == status])
+        return counts
+    
+    async def get_task_counts_by_priority(self, workspace_id: str) -> Dict[str, int]:
+        """
+        Get counts of tasks grouped by priority.
+
+        Returns a dictionary with priority as key and count as value.
+        """
+        # This would be more efficient with a direct SQL query using GROUP BY
+        tasks = await self.get_by_workspace(workspace_id)
+        counts = {}
+        for priority in TaskPriority:
+            counts[priority.value] = len([t for t in tasks if t.priority == priority])
+        return counts

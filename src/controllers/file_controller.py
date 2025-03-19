@@ -248,9 +248,10 @@ async def get_file_content(
     
     # Use the first workspace ID
     workspace_id = workspaces[0].id
-    
+    logger.info("Workpsace Id",workspace_id)
     # Get the file
     file = await file_service.get_file(file_id, workspace_id)
+    logger.info("File Id",file)
     if not file:
         raise HTTPException(status_code=404, detail="File not found")
     
@@ -258,6 +259,7 @@ async def get_file_content(
     if hasattr(settings, 'USE_S3_STORAGE') and settings.USE_S3_STORAGE:
         # For S3 storage, redirect to the S3 URL
         url = get_file_url(file.path)
+        logger.info(url)
         return Response(status_code=302, headers={"Location": url})
     else:
         # For local storage, stream the file

@@ -341,44 +341,94 @@ class EventUpdate(BaseModel):
     end_at: Optional[str]
     lead: Optional[str]
 
+from models.task_model import TaskPriority, TaskStatus, TaskType
+
 class Task(BaseModel):
     id: str
     workspace_id: str
     owner_id: str
-    assignee_id: str
+    assignee_id: Optional[str] = None
     title: str
-    description: Optional[str]
-    due_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    assignee: Optional[User]
+    description: Optional[str] = None
+    due_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    priority: TaskPriority = TaskPriority.MEDIUM
+    status: TaskStatus = TaskStatus.ACTIVE
+    type: TaskType = TaskType.GENERAL
+    parent_id: Optional[str] = None
+    position: int = 0
+    tags: List[str] = []
+    notifications: dict = {}
+    is_recurring: bool = False
+    recurrence_pattern: Optional[dict] = None
 
 class TaskCreate(BaseModel):
-    workspace_id: str
-    owner_id: str
-    assignee_id: str
+    owner_id: Optional[str] = None
+    assignee_id: Optional[str] = None
     title: str
     description: str
-    due_at: Optional[datetime]
+    due_at: Optional[datetime] = None
+    priority: Optional[TaskPriority] = TaskPriority.MEDIUM
+    status: Optional[TaskStatus] = TaskStatus.ACTIVE
+    type: Optional[TaskType] = TaskType.GENERAL
+    parent_id: Optional[str] = None
+    position: Optional[int] = 0
+    tags: Optional[List[str]] = []
+    notifications: Optional[dict] = {}
+    is_recurring: Optional[bool] = False
+    recurrence_pattern: Optional[dict] = None
 
 class TaskUpdate(BaseModel):
-    workspace_id: str
-    owner_id: str
-    assignee_id: str
-    title: str
-    description: str
-    due_at: Optional[datetime]
-    completed_at: Optional[datetime]
+    workspace_id: Optional[str] = None
+    owner_id: Optional[str] = None
+    assignee_id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    priority: Optional[TaskPriority] = None
+    status: Optional[TaskStatus] = None
+    type: Optional[TaskType] = None
+    parent_id: Optional[str] = None
+    position: Optional[int] = None
+    tags: Optional[List[str]] = None
+    notifications: Optional[dict] = None
+    is_recurring: Optional[bool] = None
+    recurrence_pattern: Optional[dict] = None
 
 class TaskResponse(BaseModel):
     id: str
     workspace_id: str
     owner_id: str
-    assignee_id: str
+    assignee_id: Optional[str] = None
     title: str
-    description: Optional[str]
-    due_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    assignee: Optional[User]
+    description: Optional[str] = None
+    due_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    priority: TaskPriority = TaskPriority.MEDIUM
+    status: TaskStatus = TaskStatus.ACTIVE
+    type: TaskType = TaskType.GENERAL
+    parent_id: Optional[str] = None
+    position: int = 0
+    tags: List[str] = []
+    notifications: dict = {}
+    is_recurring: bool = False
+    recurrence_pattern: Optional[dict] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class TaskFilterParams(BaseModel):
+    workspace_id: Optional[str] = None
+    owner_id: Optional[str] = None
+    assignee_id: Optional[str] = None
+    completed: Optional[bool] = None
+    priority: Optional[TaskPriority] = None
+    status: Optional[TaskStatus] = None
+    type: Optional[TaskType] = None
+    parent_id: Optional[str] = None
+    due_before: Optional[datetime] = None
+    due_after: Optional[datetime] = None
+    tags: Optional[List[str]] = None
 
 # Activity related schemas
 class Activity(BaseModel):
@@ -406,5 +456,4 @@ class ActivityResponse(Activity):
     details: Optional[dict] = None
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
