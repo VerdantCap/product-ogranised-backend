@@ -24,6 +24,18 @@ class User(BaseModel):
     sms_notification: bool = False
     push_notification: bool = False
     active_workspace_id: Optional[str] = None
+    # Profile fields
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    timezone: Optional[str] = None
+    bio: Optional[str] = None
+    languages: Optional[str] = None
+    avatar_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    marketing_email: bool = False
+    marketing_phone: bool = False
 
 class CreateUserIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -76,18 +88,43 @@ class ReplacePassword(BaseModel):
         description="New password must contain at least 1 digit, 1 uppercase letter, 1 lowercase letter, and 1 special character.",
     )
 
-class Profile(BaseModel):
-    id: str
-    unique_identifier: str
+class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
-    introduction: Optional[str] = None
-    industry: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
-    languages: Optional[list[str]] = []
-    summary: Optional[str] = None
+    timezone: Optional[str] = None
+    bio: Optional[str] = None
+    languages: Optional[str] = None
+
+class UserPreferencesUpdate(BaseModel):
+    email_notification: Optional[bool] = None
+    sms_notification: Optional[bool] = None
+    push_notification: Optional[bool] = None
+    marketing_email: Optional[bool] = None
+    marketing_phone: Optional[bool] = None
+
+class UserProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    timezone: Optional[str] = None
+    bio: Optional[str] = None
+    languages: Optional[str] = None
     avatar_url: Optional[str] = None
-    page_cover_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    email_notification: bool = False
+    sms_notification: bool = False
+    push_notification: bool = False
+    marketing_email: bool = False
+    marketing_phone: bool = False
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 # Workspace related schemas
 class Workspace(BaseModel):

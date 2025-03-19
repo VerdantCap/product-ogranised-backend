@@ -8,6 +8,8 @@ from models.item_model import Item
 from models.task_model import Task
 from models.transport_model import Transport
 from models.workspace_model import Workspace
+from models.activity_model import Activity
+from models.folder_model import Folder
 
 __all__ = [
     "Base",
@@ -20,4 +22,6 @@ __all__ = [
     "Task",
     "Transport",
     "Workspace",
+    "Activity",
+    "Folder"
 ]

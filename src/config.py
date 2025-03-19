@@ -116,9 +116,9 @@ class DevelopConfig(BaseConfig):
     STORAGE_ACCOUNT_KEY: str = os.environ.get("STORAGE_ACCOUNT_KEY", "")
     
     # S3/MinIO configuration
-    AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "minio")
-    AWS_SECRET_KEY: str = os.environ.get("AWS_SECRET_KEY", "minio123")
-    S3_ENDPOINT_URL: str = os.environ.get("S3_ENDPOINT_URL", "http://minio:9000")
+    AWS_ACCESS_KEY_ID: str = os.environ.get("AWS_ACCESS_KEY_ID", "De9PtzUjUUf2Cki33seX")
+    AWS_SECRET_KEY: str = os.environ.get("AWS_SECRET_KEY", "bd9UfONqpxM89ZfNOKRw9f8Ux8eZgHnphQIiekfh")
+    S3_ENDPOINT_URL: str = os.environ.get("S3_ENDPOINT_URL", "http://localhost:9000")
     S3_PUBLIC_BUCKET: str = os.environ.get("S3_PUBLIC_BUCKET", "public")
     S3_FILES_BUCKET_NAME: str = os.environ.get("S3_FILES_BUCKET_NAME", "files")
     MINIO_API_PORT_NUMBER: int = int(os.environ.get("MINIO_API_PORT_NUMBER", 9000))

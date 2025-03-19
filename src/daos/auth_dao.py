@@ -42,27 +42,41 @@ class AuthDAO:
         await self.db.commit()
         return user
     
-    async def update_user_name(self, user: User, new_name: str) -> None:
+    async def update_user_profile(self, user_id: str, profile_data: dict) -> None:
         """
-        Update the user's name in the database.
+        Update the user's profile in the database.
         """
         query = (
             update(User)
-            .where(User.id == user.id)
-            .values(user_name=new_name)
+            .where(User.id == user_id)
+            .values(**profile_data)
         )
         await self.db.execute(query)
+        await self.db.commit()
 
-    async def update_user_email(self, user: User, new_email: str) -> None:
+    async def update_user_preferences(self, user_id: str, preferences_data: dict) -> None:
         """
-        Update the user's email in the database.
+        Update the user's preferences in the database.
         """
         query = (
             update(User)
-            .where(User.id == user.id)
-            .values(email=new_email)
+            .where(User.id == user_id)
+            .values(**preferences_data)
         )
         await self.db.execute(query)
+        await self.db.commit()
+
+    async def update_user_avatar(self, user_id: str, avatar_url: str) -> None:
+        """
+        Update the user's avatar URL in the database.
+        """
+        query = (
+            update(User)
+            .where(User.id == user_id)
+            .values(avatar_url=avatar_url)
+        )
+        await self.db.execute(query)
+        await self.db.commit()
 
     async def verify_user_email(self, user: User) -> None:
         """

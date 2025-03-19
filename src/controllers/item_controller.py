@@ -11,6 +11,7 @@ from schemas import (
 from daos.item_dao import ItemDAO
 from daos.transport_dao import TransportDAO
 from daos.excursion_dao import ExcursionDAO
+from daos.workspace_dao import WorkspaceDAO
 from services.auth_service import get_current_user
 from utils.route import APIRouter
 from enums import ItemSpace, ItemType, ItemStatus
@@ -149,14 +150,28 @@ async def add_file(
     file_data: FileCreate,
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
     item = item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to add files to this item")
     
-    file_path = await store_file(file_data.file)
+    # Get the user's workspaces
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user.id)
+    if not workspaces:
+        raise HTTPException(status_code=404, detail="No workspace found for this user")
+    
+    # Use the first workspace ID (or you could implement logic to select a specific one)
+    workspace_id = workspaces[0].id
+    
+    # Create the storage path using the workspace ID
+    storage_path = f"workspaces/{workspace_id}/items/{item_id}"
+    
+    # Store the file using the storage utility
+    file_path = await store_file(file_data.file, storage_path)
+    
     file_create = FileCreate(
-        workspace_id=user.active_workspace_id,
+        workspace_id=workspace_id,
         path=file_path,
         type=file_data.file.content_type,
         folder = str(item.space),

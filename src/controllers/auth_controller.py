@@ -1,10 +1,11 @@
 import logging
 import smtplib
+import os
 from typing import Annotated, Optional
 # from datetime import datetime, timedelta
 
 import redis.asyncio as redis
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status, Request, UploadFile, File, Form
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi_sso.sso.google import GoogleSSO
 # from fastapi_sso.sso.apple import AppleSSO
@@ -16,10 +17,14 @@ from schemas import (
     ForgotPassword,
     VerifyOtpRequest,
     ForgotPasswordReset,
-    ReplacePassword
+    ReplacePassword,
+    UserProfileUpdate,
+    UserPreferencesUpdate,
+    UserProfileResponse
 )
 
 from services.auth_service import AuthService, get_current_user
+from daos.workspace_dao import WorkspaceDAO
 from config import settings
 from utils.route import APIRouter
 from utils.helpers import (
@@ -219,24 +224,6 @@ async def google_callback(
 #             status_code=status.HTTP_303_SEE_OTHER
 #         )
 
-
-@auth_router.post("/logout", dependencies=[Depends(get_current_user)])
-async def logout_controller() -> JSONResponse:
-    """
-    User logout.
-
-    This function handles user logout by invalidating the user's session.
-
-    Returns a JSON response indicating that the logout was successful.
-    """
-    try:
-        response_data = {"message": "Logout successful"}
-        return JSONResponse(content=response_data, status_code=200)
-
-    except Exception as e:
-        logger.error(f"An error occurred during logout: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
 @auth_router.post("/{user_id}/generate_code")
 async def verify_user_email_controller(
     user_id: str,
@@ -435,10 +422,11 @@ async def replace_password_controller(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@auth_router.get("/me")
+@auth_router.get("/me", response_model=UserProfileResponse)
 async def get_current_user_controller(
-    user_info: dict = Depends(get_current_user)
-) -> JSONResponse:
+    user_info: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(AuthService)
+) -> UserProfileResponse:
     """
     Get current user information.
     
@@ -448,7 +436,33 @@ async def get_current_user_controller(
     """
     try:
         logger.info("Getting current user information")
-        return JSONResponse(content=user_info, status_code=status.HTTP_200_OK)
+        user_id = user_info.get("user_id")
+        user = await auth_service.auth_dao.get_user_by_id(user_id)
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return UserProfileResponse(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            address=user.address,
+            phone=user.phone,
+            country=user.country,
+            city=user.city,
+            timezone=user.timezone,
+            bio=user.bio,
+            languages=user.languages,
+            avatar_url=user.avatar_url,
+            cover_image_url=user.cover_image_url,
+            email_notification=user.email_notification,
+            sms_notification=user.sms_notification,
+            push_notification=user.push_notification,
+            marketing_email=user.marketing_email,
+            marketing_phone=user.marketing_phone,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")
         raise HTTPException(
@@ -456,6 +470,104 @@ async def get_current_user_controller(
         )
     except Exception as e:
         logger.error(f"An error occurred while getting user information: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@auth_router.put("/profile")
+async def update_profile_controller(
+    profile_data: UserProfileUpdate = None,
+    avatar: UploadFile = File(None),
+    user_info: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(AuthService),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+) -> JSONResponse:
+    """
+    Update user profile.
+    
+    This endpoint allows the user to update their profile information.
+    
+    Returns a JSON response indicating success or failure.
+    """
+    try:
+        logger.info("Updating user profile")
+        user_id = user_info.get("user_id")
+        
+        # Update profile data if provided
+        if profile_data:
+            profile_dict = profile_data.dict(exclude_unset=True)
+            if profile_dict:
+                await auth_service.auth_dao.update_user_profile(user_id, profile_dict)
+        
+        # Handle avatar upload if provided
+        if avatar:
+            from utils.storage import store_file, get_file_url
+            
+            # Get the user's workspaces
+            workspaces = await workspace_dao.get_workspaces_by_user_id(user_id)
+            if not workspaces:
+                # If user has no workspaces, create a default storage path
+                storage_path = f"users/{user_id}/avatars"
+            else:
+                # Use the first workspace ID
+                workspace_id = workspaces[0].id
+                storage_path = f"workspaces/{workspace_id}/users/{user_id}/avatars"
+            
+            # Store the avatar using the storage utility
+            file_path = await store_file(avatar, storage_path)
+            
+            # Get the URL for the stored file
+            if hasattr(settings, 'USE_S3_STORAGE') and settings.USE_S3_STORAGE:
+                avatar_url = get_file_url(file_path)
+            else:
+                avatar_url = f"/files/{file_path}"
+            
+            # Update the avatar URL in the database
+            await auth_service.auth_dao.update_user_avatar(user_id, avatar_url)
+        
+        return JSONResponse(
+            content={"message": "Profile updated successfully"},
+            status_code=status.HTTP_200_OK
+        )
+    except HTTPException as he:
+        logger.error(f"{he.detail}: {he}")
+        raise HTTPException(
+            status_code=he.status_code, detail=he.detail, headers=he.headers
+        )
+    except Exception as e:
+        logger.error(f"An error occurred while updating user profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@auth_router.put("/preferences")
+async def update_preferences_controller(
+    preferences: UserPreferencesUpdate,
+    user_info: dict = Depends(get_current_user),
+    auth_service: AuthService = Depends(AuthService)
+) -> JSONResponse:
+    """
+    Update user preferences.
+    
+    This endpoint allows the user to update their notification and marketing preferences.
+    
+    Returns a JSON response indicating success or failure.
+    """
+    try:
+        logger.info("Updating user preferences")
+        user_id = user_info.get("user_id")
+        
+        preferences_dict = preferences.dict(exclude_unset=True)
+        if preferences_dict:
+            await auth_service.auth_dao.update_user_preferences(user_id, preferences_dict)
+        
+        return JSONResponse(
+            content={"message": "Preferences updated successfully"},
+            status_code=status.HTTP_200_OK
+        )
+    except HTTPException as he:
+        logger.error(f"{he.detail}: {he}")
+        raise HTTPException(
+            status_code=he.status_code, detail=he.detail, headers=he.headers
+        )
+    except Exception as e:
+        logger.error(f"An error occurred while updating user preferences: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 

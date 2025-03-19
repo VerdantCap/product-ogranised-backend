@@ -31,6 +31,65 @@ def get_s3_client():
         logger.error(f"Failed to create S3 client: {str(e)}")
         raise e
 
+async def get_file_size(file_path: str) -> int:
+    """
+    Get the size of a file in bytes.
+    
+    Args:
+        file_path: The path to the file
+        
+    Returns:
+        int: The size of the file in bytes
+    """
+    # Check if S3 storage is enabled
+    if hasattr(settings, 'USE_S3_STORAGE') and settings.USE_S3_STORAGE:
+        return await get_file_size_s3(file_path)
+    else:
+        return get_file_size_local(file_path)
+
+async def get_file_size_s3(file_path: str) -> int:
+    """
+    Get the size of a file stored in S3/MinIO.
+    
+    Args:
+        file_path: The relative path to the file in S3
+        
+    Returns:
+        int: The size of the file in bytes
+    """
+    # Determine which bucket to use
+    bucket_name = settings.S3_FILES_BUCKET_NAME
+    
+    # Get the S3 client
+    s3_client = get_s3_client()
+    
+    try:
+        # Get the file metadata
+        response = s3_client.head_object(Bucket=bucket_name, Key=file_path)
+        return response.get('ContentLength', 0)
+    except Exception as e:
+        logger.error(f"Failed to get file size from S3: {str(e)}")
+        return 0
+
+def get_file_size_local(file_path: str) -> int:
+    """
+    Get the size of a file stored in the local filesystem.
+    
+    Args:
+        file_path: The relative path to the file
+        
+    Returns:
+        int: The size of the file in bytes
+    """
+    full_path = os.path.join(settings.STORAGE_DIR, file_path)
+    try:
+        if os.path.exists(full_path):
+            return os.path.getsize(full_path)
+        return 0
+    except Exception as e:
+        logger.error(f"Failed to get file size: {str(e)}")
+        return 0
+
 def ensure_bucket_exists(bucket_name):
     """
     Ensure that the specified bucket exists, creating it if necessary.
