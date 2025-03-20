@@ -1,5 +1,5 @@
 import logging
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from typing import Optional, List
 from models.workspace_model import Workspace
 from models.association_tables import user_workspace
@@ -130,18 +130,17 @@ class WorkspaceDAO:
         await self.db.refresh(workspace)
         return workspace
 
-    async def set_spaces(self, workspace: Workspace, selected_spaces: list) -> None: 
+    async def set_spaces(self, workspace: Workspace, selected_spaces: list) -> Workspace: 
         """
         Set the order of spaces in a workspace.
 
-        Updates the space_order field in the database.
+        Updates the spaces_order field in the database.
+        Returns the updated Workspace object.
         """
-        query = (
-            update(Workspace)
-            .where(Workspace.id == workspace.id)
-            .values(space_order=selected_spaces)
-        )
-        await self.db.execute(query)
+        workspace.spaces_order = selected_spaces
+        await self.db.commit()
+        await self.db.refresh(workspace)
+        return workspace
 
     async def toggle_space(self, workspace: Workspace, space_value: str) -> Workspace:
         """
@@ -149,6 +148,15 @@ class WorkspaceDAO:
 
         Returns the updated Workspace object.
         """
+        # Ensure space_value is a valid ItemSpace value
+        from enums import ItemSpace
+        valid_spaces = [space.value for space in ItemSpace]
+        if space_value not in valid_spaces:
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Invalid space value: {space_value}. Valid values are: {', '.join(valid_spaces)}"
+            )
+            
         spaces_order = workspace.spaces_order
         if space_value in spaces_order:
             spaces_order.remove(space_value)

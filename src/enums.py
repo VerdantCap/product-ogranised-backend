@@ -136,11 +136,9 @@ class ItemSpace(str, Enum):
     INSURANCE = 'insurance'  
     HOUSEHOLD = 'household'  
     FINANCE = 'finance'  
-    PETS = 'pets'  
-    PERSONAL_DOCUMENTS = 'personal_documents'  
+    PETS = 'pets' 
     VEHICLES = 'vehicles'  
-    TRAVEL = 'travel'  
-    SPECIAL_EVENTS = 'special_events'
+    TRAVEL = 'travel'
     
     # Method to get the class instance associated with the item space
     def class_instance(self):

@@ -107,6 +107,15 @@ async def update_workspace(
     if workspace_up.name is not None:
         workspace.name = workspace_up.name
     if workspace_up.spaces_order is not None:
+        # The WorkspaceUpdate schema should already validate that spaces_order contains valid ItemSpace values
+        # But we'll add an extra check here just to be safe
+        valid_spaces = [space.value for space in ItemSpace]
+        for space in workspace_up.spaces_order:
+            if space not in valid_spaces:
+                raise HTTPException(
+                    status_code=422, 
+                    detail=f"Invalid space value: {space}. Valid values are: {', '.join(valid_spaces)}"
+                )
         workspace.spaces_order = workspace_up.spaces_order
     if workspace_up.cancelled_at is not None:
         workspace.cancelled_at = workspace_up.cancelled_at
@@ -152,6 +161,25 @@ async def renewal_required(
         return RedirectResponse(url=f"/dashboard?workspace_id={workspace.id}")  
     return {"message": "Please renew your subscription."}  
 
+@workspace_router.get("/{workspace_id}")
+async def get_workspace(
+    workspace_id: str,
+    user: User = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+    ):
+    """
+    Get workspace by ID.
+
+    This function retrieves a workspace by its ID.
+
+    Returns the workspace if found and the user has access to it.
+    """
+    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
+    if not workspace or workspace.owner_id != user["user_id"]:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    return workspace
+
 @workspace_router.get("/{workspace_id}/refresh-spaces")
 async def refresh_spaces(
     workspace_id: str,
@@ -188,6 +216,15 @@ async def update_item_space_order(
     workspace = await workspace_dao.get_workspace_by_id(workspace_id)
     if not workspace or workspace.owner_id != user["user_id"]:
         raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    # Validate that all items in the order list are valid ItemSpace enum values
+    valid_spaces = [space.value for space in ItemSpace]
+    for space in order:
+        if space not in valid_spaces:
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Invalid space value: {space}. Valid values are: {', '.join(valid_spaces)}"
+            )
     
     workspace = await workspace_dao.set_spaces(workspace, order)
     return {"message": "Success", "enabled_spaces": workspace.enabled_spaces_ordered()}

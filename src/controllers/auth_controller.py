@@ -425,7 +425,8 @@ async def replace_password_controller(
 @auth_router.get("/me", response_model=UserProfileResponse)
 async def get_current_user_controller(
     user_info: dict = Depends(get_current_user),
-    auth_service: AuthService = Depends(AuthService)
+    auth_service: AuthService = Depends(AuthService),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
 ) -> UserProfileResponse:
     """
     Get current user information.
@@ -434,14 +435,15 @@ async def get_current_user_controller(
     
     Returns a JSON response containing the user's information.
     """
+    
     try:
         logger.info("Getting current user information")
         user_id = user_info.get("user_id")
         user = await auth_service.auth_dao.get_user_by_id(user_id)
-        
+        workspaces = await workspace_dao.get_workspaces_by_user_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
+        logger.info(workspaces[0].id)
         return UserProfileResponse(
             id=user.id,
             name=user.name,
@@ -461,7 +463,8 @@ async def get_current_user_controller(
             marketing_email=user.marketing_email,
             marketing_phone=user.marketing_phone,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
+            workspace_id = workspaces[0].id
         )
     except HTTPException as he:
         logger.error(f"{he.detail}: {he}")

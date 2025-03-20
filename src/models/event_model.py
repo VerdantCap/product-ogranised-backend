@@ -10,7 +10,7 @@ class Event(Base):
     workspace_id: Mapped[str] = mapped_column(String, ForeignKey('workspaces.id', ondelete="CASCADE", onupdate="CASCADE"))
     name: Mapped[str]= mapped_column(String, nullable=False)
     description: Mapped[str]= mapped_column(String, nullable=True)
-    start_at: Mapped[str]= mapped_column(DateTime(timezone=True), nullable=True)  
+    start_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)  
     end_at: Mapped[datetime]= mapped_column(DateTime(timezone=True), nullable=True)
     lead: Mapped[str]= mapped_column(String, nullable=True)  # Person responsible for the event
 

@@ -125,6 +125,7 @@ class UserProfileResponse(BaseModel):
     marketing_phone: bool = False
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    workspace_id: str
 
 # Workspace related schemas
 class Workspace(BaseModel):
@@ -323,22 +324,22 @@ class Event(BaseModel):
     owner_id: str
     name: str
     description: Optional[str]
-    start_at: str
-    end_at: str
+    start_at: datetime
+    end_at: datetime
     lead: Optional[str] = None
 
 class EventCreate(BaseModel):
     name: str
     description: Optional[str]
-    start_at: str
-    end_at: str
+    start_at: datetime
+    end_at: datetime
     lead: Optional[str] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str]
     description: Optional[str]
-    start_at: Optional[str]
-    end_at: Optional[str]
+    start_at: Optional[datetime]
+    end_at: Optional[datetime]
     lead: Optional[str]
 
 from models.task_model import TaskPriority, TaskStatus, TaskType

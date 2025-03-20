@@ -28,3 +28,23 @@ class Workspace(Base):
     activities = relationship("Activity", back_populates="workspace")
     folders = relationship("Folder", back_populates="workspace")
     files = relationship("File", back_populates="workspace")
+    
+    def has_active_subscription(self) -> bool:
+        """
+        Check if the workspace has an active subscription.
+        
+        Returns True if the subscription is active, False otherwise.
+        """
+        if self.expires_at is None:
+            return True
+        return self.expires_at > datetime.now()
+    
+    def enabled_spaces_ordered(self) -> List[str]:
+        """
+        Get the list of enabled spaces in the workspace, in order.
+        
+        Returns a list of space names.
+        """
+        if not self.spaces_order or not isinstance(self.spaces_order, list):
+            return []
+        return self.spaces_order
