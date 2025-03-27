@@ -17,7 +17,7 @@ class JWTBearer:
     @staticmethod
     def decode_jwt(token: str)-> Any:
         try:
-            return jwt.decode(token, settings.JWT_SECRET, algorithms=["H256"])
+            return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
             logging.error("JWT token has expired")
             raise HTTPException(
@@ -25,7 +25,7 @@ class JWTBearer:
                 detail="Invalid JWT token: Token has expired"
             )
         except jwt.InvalidTokenError:
-            logging.err("Invalid JWT token")
+            logging.error("Invalid JWT token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid JWT token: Token is not valid"

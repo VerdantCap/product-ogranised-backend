@@ -304,3 +304,161 @@ def delete_file(file_path: str) -> bool:
         return delete_file_s3(file_path)
     else:
         return delete_file_local(file_path)
+
+def create_directory_local(directory_path: str) -> bool:
+    """
+    Create a directory in the local filesystem.
+    
+    Args:
+        directory_path: The relative path to the directory
+            
+    Returns:
+        bool: True if directory was created or already exists
+    """
+    full_path = os.path.join(settings.STORAGE_DIR, directory_path)
+    try:
+        os.makedirs(full_path, exist_ok=True)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create directory: {str(e)}")
+        return False
+
+def create_directory_s3(directory_path: str) -> bool:
+    """
+    Create a directory in S3/MinIO.
+    
+    Note: S3 doesn't have a concept of directories, but we can create an empty object
+    with a trailing slash to simulate a directory.
+    
+    Args:
+        directory_path: The relative path to the directory in S3
+            
+    Returns:
+        bool: True if directory was created
+    """
+    # Ensure the path ends with a slash
+    if not directory_path.endswith('/'):
+        directory_path = f"{directory_path}/"
+    
+    # Determine which bucket to use
+    bucket_name = settings.S3_FILES_BUCKET_NAME
+    
+    # Ensure the bucket exists
+    ensure_bucket_exists(bucket_name)
+    
+    # Get the S3 client
+    s3_client = get_s3_client()
+    
+    try:
+        # Create an empty object with a trailing slash to simulate a directory
+        s3_client.put_object(
+            Bucket=bucket_name,
+            Key=directory_path,
+            Body=''
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create directory in S3: {str(e)}")
+        return False
+
+def create_directory(directory_path: str) -> bool:
+    """
+    Create a directory using the configured storage backend (S3/MinIO or local filesystem).
+    
+    Args:
+        directory_path: The relative path to the directory
+            
+    Returns:
+        bool: True if directory was created or already exists
+    """
+    # Check if S3 storage is enabled
+    if hasattr(settings, 'USE_S3_STORAGE') and settings.USE_S3_STORAGE:
+        return create_directory_s3(directory_path)
+    else:
+        return create_directory_local(directory_path)
+
+def remove_directory_local(directory_path: str) -> bool:
+    """
+    Remove a directory from the local filesystem.
+    
+    Args:
+        directory_path: The relative path to the directory
+            
+    Returns:
+        bool: True if directory was removed, False if directory doesn't exist
+    """
+    import shutil
+    full_path = os.path.join(settings.STORAGE_DIR, directory_path)
+    try:
+        if os.path.exists(full_path):
+            if os.path.isdir(full_path):
+                shutil.rmtree(full_path)
+            else:
+                os.remove(full_path)  # In case it's a file
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Failed to remove directory: {str(e)}")
+        return False
+
+def remove_directory_s3(directory_path: str) -> bool:
+    """
+    Remove a directory from S3/MinIO.
+    
+    Note: S3 doesn't have a concept of directories, so we need to delete all objects
+    with the directory prefix.
+    
+    Args:
+        directory_path: The relative path to the directory in S3
+            
+    Returns:
+        bool: True if directory was removed
+    """
+    # Ensure the path ends with a slash
+    if not directory_path.endswith('/'):
+        directory_path = f"{directory_path}/"
+    
+    # Determine which bucket to use
+    bucket_name = settings.S3_FILES_BUCKET_NAME
+    
+    # Get the S3 client
+    s3_client = get_s3_client()
+    
+    try:
+        # List all objects with the directory prefix
+        response = s3_client.list_objects_v2(
+            Bucket=bucket_name,
+            Prefix=directory_path
+        )
+        
+        # If there are no objects, return True (nothing to delete)
+        if 'Contents' not in response:
+            return True
+        
+        # Delete all objects with the directory prefix
+        for obj in response['Contents']:
+            s3_client.delete_object(
+                Bucket=bucket_name,
+                Key=obj['Key']
+            )
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to remove directory from S3: {str(e)}")
+        return False
+
+def remove_directory(directory_path: str) -> bool:
+    """
+    Remove a directory using the configured storage backend (S3/MinIO or local filesystem).
+    
+    Args:
+        directory_path: The relative path to the directory
+            
+    Returns:
+        bool: True if directory was removed, False if directory doesn't exist
+    """
+    # Check if S3 storage is enabled
+    if hasattr(settings, 'USE_S3_STORAGE') and settings.USE_S3_STORAGE:
+        return remove_directory_s3(directory_path)
+    else:
+        return remove_directory_local(directory_path)

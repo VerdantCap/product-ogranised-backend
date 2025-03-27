@@ -14,7 +14,7 @@ from models.user_model import User
 from services.auth_service import get_current_user
 from services.file_service import FileService
 from utils.route import APIRouter
-from utils.storage import get_file_url
+from utils.storage import get_file_url, create_directory, remove_directory
 from enums import FileType, ItemSpace
 from config import settings
 
@@ -436,6 +436,10 @@ async def create_folder(
     
     folder = await folder_dao.create_folder(folder)
     
+    # Create physical folder in storage
+    storage_path = f"workspaces/{workspace_id}/folders/{folder.id}"
+    create_directory(storage_path)
+    
     # Create a dictionary manually instead of using to_dict() to avoid lazy loading
     return {
         "id": folder.id,
@@ -600,5 +604,9 @@ async def delete_folder(
     
     # Delete the folder (cascade will delete subfolders and files)
     await folder_dao.delete_folder(folder)
+    
+    # Delete physical folder in storage
+    storage_path = f"workspaces/{workspace_id}/folders/{folder_id}"
+    remove_directory(storage_path)  # This will work for both S3 and local storage
     
     return {"detail": "Folder deleted successfully"}
