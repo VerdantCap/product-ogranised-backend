@@ -81,17 +81,23 @@ class FolderDAO:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_folder_path(self, folder_id: str) -> List[Folder]:
+    async def get_folder_path(self, folder_id: str) -> List[dict]:
         """
         Get the path of folders from root to the specified folder.
 
-        Returns a list of Folder objects representing the path.
+        Returns a list of dictionaries with folder id and name.
         """
         path = []
         current_folder = await self.get_by_id(folder_id)
         
         while current_folder:
-            path.insert(0, current_folder)
+            # Create a dictionary with the needed attributes to avoid lazy loading
+            folder_dict = {
+                "id": current_folder.id,
+                "name": current_folder.name
+            }
+            path.insert(0, folder_dict)
+            
             if current_folder.parent_id:
                 current_folder = await self.get_by_id(current_folder.parent_id)
             else:

@@ -74,11 +74,8 @@ async def get_files_by_workspace(
     # Get breadcrumb path if folder_id is provided
     breadcrumbs = []
     if folder_id:
-        folder_path = await folder_dao.get_folder_path(folder_id)
-        breadcrumbs = [
-            {"id": folder.id, "name": folder.name}
-            for folder in folder_path
-        ]
+        # folder_path now contains dictionaries with 'id' and 'name' keys
+        breadcrumbs = await folder_dao.get_folder_path(folder_id)
     else:
         # Root level
         breadcrumbs = [{"id": None, "name": "Root"}]
@@ -289,6 +286,7 @@ async def upload_file(
     file_type: FileType = Form(FileType.CERTIFICATE),
     user: User = Depends(get_current_user),
     file_service: FileService = Depends(FileService),
+    folder_dao: FolderDAO = Depends(FolderDAO),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
 ):
     """
@@ -303,8 +301,19 @@ async def upload_file(
     
     # Determine storage path
     storage_path = f"workspaces/{workspace_id}/files"
+    
+    # If folder_id is provided, verify it exists and build the hierarchical path
     if folder_id:
-        storage_path = f"workspaces/{workspace_id}/folders/{folder_id}"
+        folder = await folder_dao.get_by_id(folder_id)
+        if not folder or folder.workspace_id != workspace_id:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        
+        # Get the folder path to build the hierarchical storage path
+        folder_path = await folder_dao.get_folder_path(folder_id)
+        # parent_path now contains dictionaries with 'id' and 'name' keys
+        folder_ids = [f["id"] for f in folder_path]
+        folder_path_str = "/".join(folder_ids)
+        storage_path = f"workspaces/{workspace_id}/folders/{folder_path_str}"
     
     # Store the file directly using the storage utility
     from utils.storage import store_file, get_file_size
@@ -419,10 +428,14 @@ async def create_folder(
         workspace_id = workspaces[0].id
     
     # Verify parent folder if provided
+    parent_path = []
     if parent_id:
         parent_folder = await folder_dao.get_by_id(parent_id)
         if not parent_folder or parent_folder.workspace_id != workspace_id:
             raise HTTPException(status_code=404, detail="Parent folder not found")
+        
+        # Get the parent folder path for hierarchical storage
+        parent_path = await folder_dao.get_folder_path(parent_id)
     
     # Create folder
     folder = Folder(
@@ -436,8 +449,16 @@ async def create_folder(
     
     folder = await folder_dao.create_folder(folder)
     
-    # Create physical folder in storage
-    storage_path = f"workspaces/{workspace_id}/folders/{folder.id}"
+    # Create physical folder in storage with hierarchical path
+    if parent_path:
+        # Build hierarchical path including the new folder
+        # parent_path now contains dictionaries with 'id' and 'name' keys
+        folder_ids = [f["id"] for f in parent_path]
+        folder_path_str = "/".join(folder_ids) + f"/{folder.id}"
+        storage_path = f"workspaces/{workspace_id}/folders/{folder_path_str}"
+    else:
+        storage_path = f"workspaces/{workspace_id}/folders/{folder.id}"
+    
     create_directory(storage_path)
     
     # Create a dictionary manually instead of using to_dict() to avoid lazy loading
@@ -486,11 +507,8 @@ async def get_folder(
     files = await file_dao.get_by_workspace(workspace_id, folder_id, skip, limit)
     
     # Get breadcrumb path
-    folder_path = await folder_dao.get_folder_path(folder_id)
-    breadcrumbs = [
-        {"id": folder.id, "name": folder.name}
-        for folder in folder_path
-    ]
+    # folder_path now contains dictionaries with 'id' and 'name' keys
+    breadcrumbs = await folder_dao.get_folder_path(folder_id)
     
     # Create folder dictionaries manually to avoid lazy loading
     folder_dicts = []
@@ -552,7 +570,14 @@ async def update_folder(
         
         # Check if the new parent is a descendant of this folder
         parent_path = await folder_dao.get_folder_path(parent_id)
-        if any(f.id == folder_id for f in parent_path):
+        # parent_path now contains dictionaries with 'id' and 'name' keys
+        is_descendant = False
+        for f in parent_path:
+            if f["id"] == folder_id:
+                is_descendant = True
+                break
+        
+        if is_descendant:
             raise HTTPException(status_code=400, detail="Cannot move a folder to its own descendant")
         
         folder.parent_id = parent_id

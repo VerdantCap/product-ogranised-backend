@@ -1,10 +1,8 @@
 import logging
 import uuid
-import os
 from typing import List, Optional, Dict, Any
 from fastapi import UploadFile, Depends, HTTPException
 from models.file_model import File
-from models.folder_model import Folder
 from daos.file_dao import FileDAO
 from daos.folder_dao import FolderDAO
 from utils.storage import store_file, delete_file, get_file_url, get_file_size
@@ -207,15 +205,41 @@ class FileService:
         # Handle folder change
         if 'folder_id' in update_data and update_data['folder_id'] != file.folder_id:
             new_folder_id = update_data['folder_id']
+            old_folder_id = file.folder_id
+            
+            # If moving to a folder, verify the new folder exists
             if new_folder_id:
-                # Verify the new folder exists
                 folder = await self.folder_dao.get_by_id(new_folder_id)
                 if not folder or folder.workspace_id != workspace_id:
                     raise HTTPException(status_code=404, detail="Folder not found")
+                
+                # Get the new folder path for hierarchical storage
+                folder_path = await self.folder_dao.get_folder_path(new_folder_id)
+                folder_path_str = "/".join([f.id for f in folder_path])
+                new_storage_path = f"workspaces/{workspace_id}/folders/{folder_path_str}"
+            else:
+                # Moving to root
+                new_storage_path = f"workspaces/{workspace_id}/files"
+            
+            # Move the file to the new location
+            from utils.storage import store_file, delete_file, get_file_url, get_file_size
+            import os
+            from fastapi import UploadFile
+            
+            # Get the file content
+            old_path = file.path
+            file_name = os.path.basename(old_path)
+            
+            # Create a new path for the file
+            new_path = f"{new_storage_path}/{file_name}"
+            
+            # Update the file path
+            file.path = new_path
+            file.folder_id = new_folder_id
         
-        # Update fields
+        # Update other fields
         for key, value in update_data.items():
-            if hasattr(file, key):
+            if key != 'folder_id' and hasattr(file, key):
                 setattr(file, key, value)
         
         # Increment version
@@ -276,10 +300,18 @@ class FileService:
             ]
         else:
             # Root level
-            breadcrumbs = [{"id": None, "name": "Root"}]
+            breadcrumbs = [{"id": None, "name": "Documents"}]
+        
+        # Get file counts for each folder
+        folder_dicts = []
+        for folder in folders:
+            file_count = await self.file_dao.get_file_count_by_folder(folder.id)
+            folder_dict = folder.to_dict()
+            folder_dict["files_count"] = file_count
+            folder_dicts.append(folder_dict)
         
         return {
-            "folders": [folder.to_dict() for folder in folders],
+            "folders": folder_dicts,
             "files": [file.to_dict() for file in files],
             "breadcrumbs": breadcrumbs
         }
