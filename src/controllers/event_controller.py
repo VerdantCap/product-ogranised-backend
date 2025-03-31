@@ -55,6 +55,7 @@ async def list_events(
             "id": str(event.id),
             "name": event.name,
             "description": event.description,
+            "location": event.location,
             "start_at": event.start_at,
             "end_at": event.end_at,
             "lead": event.lead,
@@ -90,9 +91,6 @@ async def create_event(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User has no workspaces"
         )
-    
-    # Use the first workspace's ID
-    workspace_id = workspaces[0].id
     
     try:
         # Validate event dates

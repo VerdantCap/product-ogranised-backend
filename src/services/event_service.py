@@ -60,6 +60,7 @@ class EventService:
                 "id": str(event.id),
                 "name": event.name,
                 "description": event.description,
+                "location": event.location,
                 "start_at": event.start_at,
                 "end_at": event.end_at,
                 "lead": event.lead,
@@ -195,6 +196,8 @@ class EventService:
                 event.name = event_data["name"]
             if "description" in event_data and event_data["description"] is not None:
                 event.description = event_data["description"]
+            if "location" in event_data and event_data["location"] is not None:
+                event.location = event_data["location"]
             if "start_at" in event_data and event_data["start_at"]:
                 event.start_at = event_data["start_at"]
             if "end_at" in event_data and event_data["end_at"]:
@@ -330,6 +333,7 @@ class EventService:
                     "id": str(event.id),
                     "name": event.name,
                     "description": event.description,
+                    "location": event.location,
                     "start_at": event.start_at,
                     "end_at": event.end_at,
                     "lead": event.lead,
@@ -384,6 +388,7 @@ class EventService:
                     "id": str(event.id),
                     "name": event.name,
                     "description": event.description,
+                    "location": event.location,
                     "start_at": event.start_at,
                     "end_at": event.end_at,
                     "lead": event.lead,

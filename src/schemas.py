@@ -324,6 +324,7 @@ class Event(BaseModel):
     owner_id: str
     name: str
     description: Optional[str]
+    location: Optional[str] = None
     start_at: datetime
     end_at: datetime
     lead: Optional[str] = None
@@ -331,6 +332,7 @@ class Event(BaseModel):
 class EventCreate(BaseModel):
     name: str
     description: Optional[str]
+    location: Optional[str] = None
     start_at: datetime
     end_at: datetime
     lead: Optional[str] = None
@@ -338,6 +340,7 @@ class EventCreate(BaseModel):
 class EventUpdate(BaseModel):
     name: Optional[str]
     description: Optional[str]
+    location: Optional[str]
     start_at: Optional[datetime]
     end_at: Optional[datetime]
     lead: Optional[str]
