@@ -193,9 +193,6 @@ async def delete_event(
             detail="User has no workspaces"
         )
     
-    # Use the first workspace's ID
-    workspace_id = workspaces[0].id
-    
     try:
         # Use the event service to delete the event
         result = await event_service.delete_event(
