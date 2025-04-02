@@ -2,6 +2,47 @@ from enum import Enum
 from typing import Optional
 from fastapi import HTTPException  
 
+# Enum class representing different workspace roles
+class WorkspaceRole(str, Enum):
+    OWNER = 'owner'
+    ADMIN = 'admin'
+    EDITOR = 'editor'
+    VIEWER = 'viewer'
+    
+    # Method to get a human-readable label for the role
+    def get_label(self) -> str:
+        return self.name.replace('_', ' ').title()
+    
+    # Method to get the permissions associated with the role
+    def get_permissions(self) -> dict:
+        permissions = {
+            WorkspaceRole.OWNER: {
+                'can_delete_workspace': True,
+                'can_manage_members': True,
+                'can_edit_content': True,
+                'can_view_content': True
+            },
+            WorkspaceRole.ADMIN: {
+                'can_delete_workspace': False,
+                'can_manage_members': True,
+                'can_edit_content': True,
+                'can_view_content': True
+            },
+            WorkspaceRole.EDITOR: {
+                'can_delete_workspace': False,
+                'can_manage_members': False,
+                'can_edit_content': True,
+                'can_view_content': True
+            },
+            WorkspaceRole.VIEWER: {
+                'can_delete_workspace': False,
+                'can_manage_members': False,
+                'can_edit_content': False,
+                'can_view_content': True
+            }
+        }
+        return permissions.get(self, {})
+
 # Enum class representing different statuses an item can have
 class ItemStatus(str, Enum):  
     ALL = 'all'  

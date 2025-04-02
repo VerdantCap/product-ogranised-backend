@@ -143,6 +143,55 @@ def compose_verify_email_message(otp: str) -> str:
     )
 
 
+def compose_workspace_invite_email(workspace_name: str, inviter_name: str, role: str, invite_link: str, expiry_days: int) -> str:
+    return """
+            <html>
+            <head>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        color: #333333;
+                        margin: 20px;
+                    }}
+                    p {{
+                        margin-bottom: 15px;
+                    }}
+                    .button {{
+                        display: inline-block;
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 10px 20px;
+                        text-align: center;
+                        text-decoration: none;
+                        font-size: 16px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <p>Dear User,</p>
+
+                <p>You have been invited by <strong>{0}</strong> to join the workspace <strong>{1}</strong> as a <strong>{2}</strong>.</p>
+
+                <p>Click the button below to accept the invitation:</p>
+                
+                <a href="{3}" class="button">Accept Invitation</a>
+
+                <p>Or copy and paste this link into your browser:</p>
+                <p>{3}</p>
+
+                <p>This invitation will expire in {4} days.</p>
+
+                <p><em>Regards,<br>
+                Getorganised Team</em></p>
+            </body>
+            </html>
+            """.format(
+        inviter_name, workspace_name, role, invite_link, expiry_days
+    )
+
+
 def paginate(items: List, page: int, size: int) -> List:
     total_items = len(items)
     start_index = (page - 1) * size

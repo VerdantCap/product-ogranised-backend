@@ -90,6 +90,14 @@ app.include_router(
     responses={404: {"description": "Not found"}},
 )
 
+# Include the invite router
+app.include_router(
+    controllers.invite_router,
+    prefix="/invite",
+    tags=["invite"],
+    responses={404: {"description": "Not found"}},
+)
+
 # Define allowed origins for CORS
 origins = [
     "http://organised.ai",

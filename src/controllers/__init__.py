@@ -29,4 +29,4 @@ from controllers.file_controller import file_router
 from controllers.activity_controller import activity_router
 
 # Import the invite router from the invite_controller module (commented out until implemented)
-# from controllers.invite_controller import invite_router
+from controllers.invite_controller import invite_router

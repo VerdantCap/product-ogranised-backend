@@ -81,15 +81,10 @@ async def get_recent_activities(
         workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
         
         if not workspaces:
-            # If user has no workspaces, return empty list
             return []
         
-        # Use the first workspace's ID
-        workspace_id = workspaces[0].id
-        
-        return await activity_dao.get_recent_activities(workspace_id, limit)
+        return await activity_dao.get_recent_activities(workspaces[0].id, limit)
     except Exception as e:
-        # Handle case where activities table might not exist yet
         logger.warning(f"Error getting recent activities: {e}")
         return []
 

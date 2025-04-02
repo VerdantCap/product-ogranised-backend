@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Table, ForeignKey, DateTime
 from base import Base
 from datetime import datetime
+from enums import WorkspaceRole
 
 item_association = Table(  
     'item_association', Base.metadata,  
@@ -13,6 +14,7 @@ user_workspace = Table(
     Base.metadata,
     Column('user_id', String, ForeignKey('users.id'), primary_key=True),
     Column('workspace_id', String, ForeignKey('workspaces.id'), primary_key=True),
+    Column('role', String, default=WorkspaceRole.VIEWER.value),
     Column('created_at', DateTime, default=datetime.utcnow),
     Column('updated_at', DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 )

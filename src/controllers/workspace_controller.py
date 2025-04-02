@@ -1,16 +1,17 @@
 import logging
 import uuid
-from fastapi import HTTPException, Depends  
+from typing import List, Dict, Any
+from fastapi import HTTPException, Depends, Path, Body
 from fastapi.responses import RedirectResponse
 from models.user_model import User
 from models.workspace_model import Workspace
 from services.auth_service import get_current_user
 from utils.route import APIRouter
-from schemas import WorkspaceCreate, WorkspaceUpdate
+from schemas import WorkspaceCreate, WorkspaceUpdate, WorkspaceMemberRoleUpdate
 from daos.workspace_dao import WorkspaceDAO
 from daos.auth_dao import AuthDAO
 from services.stripe_service import StripeService
-from enums import ItemSpace
+from enums import ItemSpace, WorkspaceRole
 from datetime import datetime
 
 # Create a new API router for workspace-related endpoints
@@ -267,53 +268,118 @@ async def cancel_subscription(
     return await workspace_dao.cancel_subscription(workspace, expires_at)
 
 
-@workspace_router.get("/{workspace_id}/members")
+@workspace_router.get("/{workspace_id}/members", response_model=List[Dict[str, Any]])
 async def list_members(
     workspace_id: str,
-    user: User = Depends(get_current_user),
+    user: Dict[str, Any] = Depends(get_current_user),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
     ):
+    """
+    Get all members of a workspace with their roles.
+    
+    This endpoint retrieves all members of a workspace, including their roles.
+    """
+    # Get the workspace
     workspace = await workspace_dao.get_workspace_by_id(workspace_id)
-
-    if not workspace or workspace.owner_id not in [w.id for w in user.workspaces]:
+    if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
     
-    return workspace.users
+    # Check if the current user is a member of the workspace
+    members = await workspace_dao.get_workspace_members(workspace_id)
+    current_user_member = next((m for m in members if m["id"] == user["user_id"]), None)
     
-@workspace_router.post("/{workspace_id}/members/{user_id}")
-async def add_member(
-    workspace_id: str,
-    user_id: str,
-    user: User = Depends(get_current_user),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-    auth_dao: AuthDAO = Depends(AuthDAO)
-    ):
+    if not current_user_member:
+        raise HTTPException(status_code=403, detail="You are not a member of this workspace")
     
-    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
-    if not workspace or workspace.owner_id != user["user_id"]:
-        raise HTTPException(status_code=404, detail="Workspace not found")
-    
-    t_user = await auth_dao.get_user_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    await auth_dao.join_workspace(t_user, workspace)
-    return {"message": "Member added successfully", "status": "success"}
+    return members
 
 @workspace_router.delete("/{workspace_id}/members/{user_id}")
 async def remove_member(
     workspace_id: str,
     user_id: str,
-    user: User = Depends(get_current_user),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-    auth_dao: AuthDAO = Depends(AuthDAO)
+    user: Dict[str, Any] = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
     ):
+    """
+    Remove a member from a workspace.
     
+    This endpoint removes a member from a workspace. Only workspace owners and admins can remove members.
+    """
+    # Get the workspace
     workspace = await workspace_dao.get_workspace_by_id(workspace_id)
-    if not workspace or workspace.owner_id != user["user_id"]:
+    if not workspace:
         raise HTTPException(status_code=404, detail="Workspace not found")
     
-    t_user = await auth_dao.get_user_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    await auth_dao.leave_workspace(t_user, workspace)
-    return {"message": "Member removed successfully", "status": "success"}
+    # Check if the current user has permission to remove members
+    members = await workspace_dao.get_workspace_members(workspace_id)
+    current_user_member = next((m for m in members if m["id"] == user["user_id"]), None)
+    
+    if not current_user_member:
+        raise HTTPException(status_code=403, detail="You are not a member of this workspace")
+    
+    if current_user_member["role"] not in [WorkspaceRole.OWNER.value, WorkspaceRole.ADMIN.value]:
+        raise HTTPException(status_code=403, detail="You don't have permission to remove members")
+    
+    # Remove the member
+    await workspace_dao.remove_workspace_member(workspace_id, user_id)
+    
+    return {"message": "Member removed successfully"}
+
+@workspace_router.put("/{workspace_id}/members/{user_id}/role")
+async def update_member_role(
+    workspace_id: str,
+    user_id: str,
+    role_data: WorkspaceMemberRoleUpdate,
+    user: Dict[str, Any] = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+    ):
+    """
+    Update a member's role in a workspace.
+    
+    This endpoint updates a member's role in a workspace. Only workspace owners and admins can update roles.
+    """
+    # Get the workspace
+    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    # Check if the current user has permission to update roles
+    members = await workspace_dao.get_workspace_members(workspace_id)
+    current_user_member = next((m for m in members if m["id"] == user["user_id"]), None)
+    
+    if not current_user_member:
+        raise HTTPException(status_code=403, detail="You are not a member of this workspace")
+    
+    if current_user_member["role"] not in [WorkspaceRole.OWNER.value, WorkspaceRole.ADMIN.value]:
+        raise HTTPException(status_code=403, detail="You don't have permission to update roles")
+    
+    # Update the member's role
+    await workspace_dao.update_member_role(workspace_id, user_id, role_data.role.value)
+    
+    return {"message": "Member role updated successfully"}
+
+@workspace_router.post("/{workspace_id}/transfer-ownership/{new_owner_id}")
+async def transfer_workspace_ownership(
+    workspace_id: str,
+    new_owner_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+    ):
+    """
+    Transfer ownership of a workspace to another user.
+    
+    This endpoint transfers ownership of a workspace to another user. Only the workspace owner can transfer ownership.
+    """
+    # Get the workspace
+    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    # Check if the current user is the owner
+    if workspace.owner_id != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Only the workspace owner can transfer ownership")
+    
+    # Transfer ownership
+    await workspace_dao.transfer_ownership(workspace_id, user["user_id"], new_owner_id)
+    
+    return {"message": "Workspace ownership transferred successfully"}

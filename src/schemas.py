@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, date
 from typing import Optional, List, Literal
 from pydantic import BaseModel, ConfigDict, Field, EmailStr
-from enums import ItemSpace, ItemType, BillingPlan
+from enums import ItemSpace, ItemType, BillingPlan, WorkspaceRole
 
 # Base schemas for common fields
 class TimestampedModel(BaseModel):
@@ -461,3 +461,27 @@ class ActivityResponse(Activity):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+# Workspace invite related schemas
+class WorkspaceInviteCreate(BaseModel):
+    email: EmailStr
+    role: WorkspaceRole = WorkspaceRole.VIEWER
+
+class WorkspaceInviteResponse(BaseModel):
+    email: str
+    role: str
+    invite_link: str
+    expires_at: datetime
+
+class WorkspaceInviteAccept(BaseModel):
+    token: str
+
+class WorkspaceMemberResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    avatar_url: Optional[str] = None
+
+class WorkspaceMemberRoleUpdate(BaseModel):
+    role: WorkspaceRole

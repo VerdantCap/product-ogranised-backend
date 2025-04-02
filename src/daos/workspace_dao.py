@@ -1,11 +1,14 @@
 import logging
 from fastapi import Depends, HTTPException
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Tuple
 from models.workspace_model import Workspace
+from models.user_model import User
 from models.association_tables import user_workspace
-from sqlalchemy import or_, select, update, delete
+from sqlalchemy import or_, select, update, delete, join
+from sqlalchemy.orm import joinedload
 from db.postgres import AsyncSession, get_postgres_session
-from datetime import datetime  
+from datetime import datetime
+from enums import WorkspaceRole
 
 # Set up a logger for the WorkspaceDAO
 logger = logging.getLogger(__name__)
@@ -213,3 +216,177 @@ class WorkspaceDAO:
         # Combine and deduplicate results
         all_workspaces = list(set(member_workspaces + owner_workspaces))
         return all_workspaces
+        
+    async def get_workspace_members(self, workspace_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all members of a workspace with their roles.
+        
+        Returns a list of dictionaries containing user information and their role in the workspace.
+        """
+        # Query to get all users associated with the workspace
+        query = (
+            select(User, user_workspace.c.role)
+            .join(user_workspace, User.id == user_workspace.c.user_id)
+            .where(user_workspace.c.workspace_id == workspace_id)
+        )
+        result = await self.db.execute(query)
+        
+        # Get the workspace to check the owner
+        workspace = await self.get_workspace_by_id(workspace_id)
+        if not workspace:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+        
+        members = []
+        for user, role in result:
+            # If the user is the owner, set role to 'owner' regardless of what's in the association table
+            if user.id == workspace.owner_id:
+                role = WorkspaceRole.OWNER.value
+                
+            members.append({
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "role": role,
+                "avatar_url": user.avatar_url
+            })
+            
+        return members
+    
+    async def add_workspace_member(self, workspace_id: str, user_id: str, role: str = WorkspaceRole.VIEWER.value) -> None:
+        """
+        Add a user to a workspace with a specific role.
+        
+        Args:
+            workspace_id: The ID of the workspace
+            user_id: The ID of the user to add
+            role: The role to assign to the user (default: viewer)
+        """
+        # Check if the user is already a member
+        query = (
+            select(user_workspace)
+            .where(
+                (user_workspace.c.workspace_id == workspace_id) & 
+                (user_workspace.c.user_id == user_id)
+            )
+        )
+        result = await self.db.execute(query)
+        existing = result.first()
+        
+        if existing:
+            # User is already a member, update their role
+            update_query = (
+                update(user_workspace)
+                .where(
+                    (user_workspace.c.workspace_id == workspace_id) & 
+                    (user_workspace.c.user_id == user_id)
+                )
+                .values(role=role, updated_at=datetime.utcnow())
+            )
+            await self.db.execute(update_query)
+        else:
+            # Add the user to the workspace with the specified role
+            insert_query = user_workspace.insert().values(
+                user_id=user_id,
+                workspace_id=workspace_id,
+                role=role,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            await self.db.execute(insert_query)
+        
+        await self.db.commit()
+    
+    async def remove_workspace_member(self, workspace_id: str, user_id: str) -> None:
+        """
+        Remove a user from a workspace.
+        
+        Args:
+            workspace_id: The ID of the workspace
+            user_id: The ID of the user to remove
+        """
+        # Get the workspace to check if the user is the owner
+        workspace = await self.get_workspace_by_id(workspace_id)
+        if not workspace:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+            
+        # Cannot remove the owner
+        if user_id == workspace.owner_id:
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot remove the workspace owner. Transfer ownership first."
+            )
+        
+        # Remove the user from the workspace
+        delete_query = (
+            delete(user_workspace)
+            .where(
+                (user_workspace.c.workspace_id == workspace_id) & 
+                (user_workspace.c.user_id == user_id)
+            )
+        )
+        await self.db.execute(delete_query)
+        await self.db.commit()
+    
+    async def update_member_role(self, workspace_id: str, user_id: str, role: str) -> None:
+        """
+        Update a user's role in a workspace.
+        
+        Args:
+            workspace_id: The ID of the workspace
+            user_id: The ID of the user
+            role: The new role to assign
+        """
+        # Get the workspace to check if the user is the owner
+        workspace = await self.get_workspace_by_id(workspace_id)
+        if not workspace:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+            
+        # Cannot change the owner's role
+        if user_id == workspace.owner_id and role != WorkspaceRole.OWNER.value:
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot change the workspace owner's role. Transfer ownership first."
+            )
+        
+        # Update the user's role
+        update_query = (
+            update(user_workspace)
+            .where(
+                (user_workspace.c.workspace_id == workspace_id) & 
+                (user_workspace.c.user_id == user_id)
+            )
+            .values(role=role, updated_at=datetime.utcnow())
+        )
+        await self.db.execute(update_query)
+        await self.db.commit()
+    
+    async def transfer_ownership(self, workspace_id: str, current_owner_id: str, new_owner_id: str) -> None:
+        """
+        Transfer ownership of a workspace from one user to another.
+        
+        Args:
+            workspace_id: The ID of the workspace
+            current_owner_id: The ID of the current owner
+            new_owner_id: The ID of the new owner
+        """
+        # Get the workspace
+        workspace = await self.get_workspace_by_id(workspace_id)
+        if not workspace:
+            raise HTTPException(status_code=404, detail="Workspace not found")
+            
+        # Verify the current owner
+        if workspace.owner_id != current_owner_id:
+            raise HTTPException(status_code=403, detail="Only the workspace owner can transfer ownership")
+        
+        # Update the workspace owner
+        workspace.owner_id = new_owner_id
+        
+        # Update the roles in the association table
+        # Set the new owner's role to 'owner'
+        await self.update_member_role(workspace_id, new_owner_id, WorkspaceRole.OWNER.value)
+        
+        # Set the previous owner's role to 'admin'
+        await self.update_member_role(workspace_id, current_owner_id, WorkspaceRole.ADMIN.value)
+        
+        await self.db.commit()
+        await self.db.refresh(workspace)
