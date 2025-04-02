@@ -15,6 +15,7 @@ from daos.workspace_dao import WorkspaceDAO
 from services.auth_service import get_current_user
 from utils.route import APIRouter
 from enums import ItemSpace, ItemType, ItemStatus
+from daos.workspace_dao import WorkspaceDAO
 from utils.storage import store_file
 
 # Create a new API router for item-related endpoints
@@ -31,7 +32,7 @@ async def list_items_by_user(
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
     ):
-    return item_dao.get_by_user(user.id, skip, limit)
+    return await item_dao.get_by_user(user.id, skip, limit)
 
 # List all items by space
 @item_router.get("/list-space")
@@ -41,8 +42,10 @@ async def list_items_by_space(
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    return item_dao.get_by_space(user.active_workspace_id, space, skip, limit)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await item_dao.get_by_space(space, workspaces[0].id, skip, limit)
 
 # List all items by type
 @item_router.get("/list-type")
@@ -52,8 +55,10 @@ async def list_items_by_type(
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    return item_dao.get_by_type(user.active_workspace_id, type, skip, limit)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await item_dao.get_by_type(type, workspaces[0].id, skip, limit)
 
 @item_router.get("/list-status")
 async def list_items_by_status(
@@ -62,8 +67,10 @@ async def list_items_by_status(
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    return item_dao.get_by_status(user.active_workspace_id, status, skip, limit)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
 
 @item_router.get("/list-workspace")
 async def list_items_by_workspace(
@@ -71,8 +78,10 @@ async def list_items_by_workspace(
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    return item_dao.get_by_workspace(user.workspace_id, skip, limit)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await item_dao.get_by_workspace(workspaces[0].id, skip, limit)
 
 @item_router.get("/list-workspace-and-user")
 async def list_items_by_workspace_and_user(
@@ -80,8 +89,10 @@ async def list_items_by_workspace_and_user(
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    return item_dao.get_by_workspace_and_user(user.workspace_id, user.id, skip, limit)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await item_dao.get_by_workspace_and_user(workspaces[0].id, user.id, skip, limit)
 
 @item_router.get("/list-all")
 async def list_items(
@@ -90,20 +101,22 @@ async def list_items(
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
     ):
-    return item_dao.get_multi(skip, limit)
+    return await item_dao.get_multi(skip, limit)
 
 # Create a new item
 @item_router.post("/create")
 async def create_item(
     item_data: ItemCreate, 
     user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO)
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     item = Item(
         **item_data.dict(), 
-        workspace_id=user.workspace_id,
+        workspace_id=workspaces[0].id,
         owner_id=user.id)
-    return item_dao.create_item(item)
+    return await item_dao.create_item(item)
 
 # Update an existing item
 @item_router.put("/{item_id}/update")
@@ -113,13 +126,13 @@ async def update_item(
     item_dao: ItemDAO = Depends(ItemDAO)
     ):
     # item = Item(**item_data.dict())
-    item = item_dao.get_by_id(item_data.id)
+    item = await item_dao.get_by_id(item_data.id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to update this item")
     for key, value in item_data.dict():
         if value is not None:
             setattr(item, key, value)
-    return item_dao.update_item(item)
+    return await item_dao.update_item(item)
 
 # Delete an item
 @item_router.delete("/{item_id}/delete")
@@ -128,10 +141,10 @@ async def delete_item(
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO)
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to delete this item")
-    return item_dao.delete_item(item)
+    return await item_dao.delete_item(item)
 
 @item_router.post("/soft-delete")
 async def soft_delete_item(
@@ -139,10 +152,10 @@ async def soft_delete_item(
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO)
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to delete this item")
-    return item_dao.soft_delete(item)
+    return await item_dao.soft_delete(item)
 
 @item_router.post("/{item_id}/upload")
 async def add_file(
@@ -152,7 +165,7 @@ async def add_file(
     item_dao: ItemDAO = Depends(ItemDAO),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to add files to this item")
     
@@ -177,7 +190,7 @@ async def add_file(
         folder = str(item.space),
         category = str(item.category)
     )
-    return item_dao.add_file(item, file_data, user.id)
+    return await item_dao.add_file(item, file_data, user.id)
 
 
 @item_router.post("/{item_id}/transport")
@@ -187,8 +200,9 @@ async def create_transport(
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
     transport_dao: TransportDAO = Depends(TransportDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to create a transport for this item")
     if item.type != ItemType.TRANSPORT:
@@ -196,8 +210,8 @@ async def create_transport(
     # if item.status != ItemStatus.DONE:
     #     raise HTTPException(status_code=400, detail="Item is not done")
 
-
-    return transport_dao.create_transport(Item(item_id, user.active_workspace_id, **transport_data.dict()))
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    return await transport_dao.create_transport(Item(item_id, workspaces[0].id, **transport_data.dict()))
 
 @item_router.get("/{item_id}/transport/{transport_id}")
 async def update_transport( 
@@ -206,13 +220,15 @@ async def update_transport(
     transport_data: TransportUpdate,
     user: User = Depends(get_current_user),
     transport_dao: TransportDAO = Depends(TransportDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    transport = transport_dao.get_by_id(transport_id)
+    transport = await transport_dao.get_by_id(transport_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     if not transport or transport.item_id != item_id:
         raise HTTPException(status_code=404, detail="Transport not found")
-    if transport.workspace_id != user.active_workspace_id:
+    if transport.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=403, detail="You are not authorized to update this transport")
-    return transport_dao.update_transport(Item(item_id, user.active_workspace_id, **transport_data.dict()))
+    return await transport_dao.update_transport(Item(item_id, workspaces[0].id, **transport_data.dict()))
 
 @item_router.post("/{item_id}/accommdation/create")
 async def create_accommodation(
@@ -220,13 +236,15 @@ async def create_accommodation(
     accommodation_data: AccommodationCreate,
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to create an accommodation for this item")
     if item.type != ItemType.ACCOMMODATION:
         raise HTTPException(status_code=400, detail="Item is not an accommodation")
-    return item_dao.create_accommodation(Item(item_id, user.active_workspace_id, **accommodation_data.dict()))
+    return await item_dao.create_accommodation(Item(item_id, workspaces[0].id, **accommodation_data.dict()))
 
 @item_router.put("/{item_id}/accommdation/{accommodation_id}/update")
 async def update_accommodation(
@@ -235,13 +253,15 @@ async def update_accommodation(
     accommodation_data: AccommodationUpdate,
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    accommodation = item_dao.get_accommodation(accommodation_id)
+    accommodation = await item_dao.get_accommodation(accommodation_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     if not accommodation or accommodation.item_id != item_id:
         raise HTTPException(status_code=404, detail="Accommodation not found")
-    if accommodation.workspace_id != user.active_workspace_id:
+    if accommodation.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=403, detail="You are not authorized to update this accommodation")
-    return item_dao.update_accommodation(Item(item_id, user.active_workspace_id, **accommodation_data.dict()))
+    return await item_dao.update_accommodation(Item(item_id, workspaces[0].id, **accommodation_data.dict()))
 
 @item_router.post("/{item_id}/excursion/create")
 async def create_excursion(
@@ -249,14 +269,16 @@ async def create_excursion(
     excursion_data: ExcursionCreate,
     user: User = Depends(get_current_user),
     excursion_dao: ExcursionDAO = Depends(ExcursionDAO),
-    item_dao: ItemDAO = Depends(ItemDAO)
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item = item_dao.get_by_id(item_id)
+    item = await item_dao.get_by_id(item_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to create an excursion for this item")
     if item.type != ItemType.EXCURSION:
         raise HTTPException(status_code=400, detail="Item is not an excursion")
-    return excursion_dao.create_excursion(Item(item_id, user.active_workspace_id, **excursion_data.dict()))
+    return await excursion_dao.create_excursion(Item(item_id, workspaces[0].id, **excursion_data.dict()))
 
 
 @item_router.put("/{item_id}/excursions/{excursion_id}/update")
@@ -264,14 +286,87 @@ async def update_excursion(
     item_id: str,
     excursion_id: str,
     user: User = Depends(get_current_user),
-    excursion_dao: ExcursionDAO = Depends(ExcursionDAO)
+    excursion_dao: ExcursionDAO = Depends(ExcursionDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    excursion = excursion_dao.get_by_id(excursion_id)
+    excursion = await excursion_dao.get_by_id(excursion_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
     if not excursion or excursion.item_id != item_id:
         raise HTTPException(status_code=404, detail="Excursion not found")
-    if excursion.workspace_id != user.active_workspace_id:
+    if excursion.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+
+# Space-specific endpoints
+@item_router.get("/finance")
+async def get_finance_items(
+    skip: int = Query(0, description="Skip items"),
+    limit: int = Query(100, description="Limit items"),
+    status: Optional[ItemStatus] = None,
+    user: User = Depends(get_current_user),
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if status:
+        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    return await item_dao.get_by_space(ItemSpace.FINANCE, workspaces[0].id, skip, limit)
+
+@item_router.get("/household")
+async def get_household_items(
+    skip: int = Query(0, description="Skip items"),
+    limit: int = Query(100, description="Limit items"),
+    status: Optional[ItemStatus] = None,
+    user: User = Depends(get_current_user),
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if status:
+        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    return await item_dao.get_by_space(ItemSpace.HOUSEHOLD, workspaces[0].id, skip, limit)
+
+@item_router.get("/insurance")
+async def get_insurance_items(
+    skip: int = Query(0, description="Skip items"),
+    limit: int = Query(100, description="Limit items"),
+    status: Optional[ItemStatus] = None,
+    user: User = Depends(get_current_user),
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if status:
+        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    return await item_dao.get_by_space(ItemSpace.INSURANCE, workspaces[0].id, skip, limit)
+
+@item_router.get("/pets")
+async def get_pet_items(
+    skip: int = Query(0, description="Skip items"),
+    limit: int = Query(100, description="Limit items"),
+    status: Optional[ItemStatus] = None,
+    user: User = Depends(get_current_user),
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if status:
+        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    return await item_dao.get_by_space(ItemSpace.PETS, workspaces[0].id, skip, limit)
+
+@item_router.get("/travel")
+async def get_travel_items(
+    skip: int = Query(0, description="Skip items"),
+    limit: int = Query(100, description="Limit items"),
+    status: Optional[ItemStatus] = None,
+    user: User = Depends(get_current_user),
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+):
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if status:
+        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    return await item_dao.get_by_space(ItemSpace.TRAVEL, workspaces[0].id, skip, limit)
 
 # Related Items Routes
 @item_router.post("/{item_id}/related/{related_id}")
@@ -279,31 +374,35 @@ async def add_related_item(
     item_id: str,
     related_id: str,
     user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO)
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item  = item_dao.get_by_id(item_id)
-    if not item or item.workspace_id != user.active_workspace_id:
+    item = await item_dao.get_by_id(item_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if not item or item.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    related_item = item_dao.get_by_id(related_id)
-    if not related_item or related_item.workspace_id != user.active_workspace_id:
+    related_item = await item_dao.get_by_id(related_id)
+    if not related_item or related_item.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=404, detail="Related item not found")
     item.related_items.append(related_item)
-    item_dao.update_item(item)
+    await item_dao.update_item(item)
 
 @item_router.delete("/{item_id}/related/{related_id}")
 async def remove_related_item(
     item_id: str,
     related_id: str,
     user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO)
+    item_dao: ItemDAO = Depends(ItemDAO),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
-    item  = item_dao.get_by_id(item_id)
-    if not item or item.workspace_id != user.active_workspace_id:
+    item = await item_dao.get_by_id(item_id)
+    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    if not item or item.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    related_item = item_dao.get_by_id(related_id)
-    if not related_item or related_item.workspace_id != user.active_workspace_id:
+    related_item = await item_dao.get_by_id(related_id)
+    if not related_item or related_item.workspace_id != workspaces[0].id:
         raise HTTPException(status_code=404, detail="Related item not found")
     item.related_items.remove(related_item)
-    item_dao.update_item(item)
+    await item_dao.update_item(item)
