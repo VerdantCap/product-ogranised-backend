@@ -62,7 +62,7 @@ async def list_items_by_type(
 
 @item_router.get("/list-status")
 async def list_items_by_status(
-    status: Optional[ItemStatus],
+    status: Optional[str] = None,
     skip: int = Query(0, description="Skip items"),
     limit: int = Query(100, description="Limit items"),
     user: User = Depends(get_current_user),
@@ -70,7 +70,17 @@ async def list_items_by_status(
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     ):
     workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
-    return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
+    if status:
+        try:
+            # Convert string to ItemStatus enum
+            item_status = ItemStatus(status.lower())
+            return await item_dao.get_by_status(item_status, workspaces[0].id, skip, limit)
+        except ValueError:
+            # If invalid status is provided, return all items
+            raise HTTPException(status_code=400, detail=f"Invalid status value: {status}")
+    else:
+        # If no status provided, return all items
+        return await item_dao.get_multi(skip, limit)
 
 @item_router.get("/list-workspace")
 async def list_items_by_workspace(
@@ -169,18 +179,11 @@ async def add_file(
     if item.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to add files to this item")
     
-    # Get the user's workspaces
     workspaces = await workspace_dao.get_workspaces_by_user_id(user.id)
     if not workspaces:
         raise HTTPException(status_code=404, detail="No workspace found for this user")
-    
-    # Use the first workspace ID (or you could implement logic to select a specific one)
     workspace_id = workspaces[0].id
-    
-    # Create the storage path using the workspace ID
     storage_path = f"workspaces/{workspace_id}/items/{item_id}"
-    
-    # Store the file using the storage utility
     file_path = await store_file(file_data.file, storage_path)
     
     file_create = FileCreate(
@@ -297,76 +300,46 @@ async def update_excursion(
         raise HTTPException(status_code=403, detail="Not authorized")
 
 
-# Space-specific endpoints
-@item_router.get("/finance")
-async def get_finance_items(
-    skip: int = Query(0, description="Skip items"),
-    limit: int = Query(100, description="Limit items"),
-    status: Optional[ItemStatus] = None,
-    user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+# Helper function to handle space-specific item retrieval
+async def get_items_by_space(
+    space: ItemSpace,
+    status: Optional[str],
+    skip: int,
+    limit: int,
+    user: User,
+    item_dao: ItemDAO,
+    workspace_dao: WorkspaceDAO
 ):
     workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
+    
     if status:
-        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
-    return await item_dao.get_by_space(ItemSpace.FINANCE, workspaces[0].id, skip, limit)
+        try:
+            # Convert string to ItemStatus enum
+            item_status = ItemStatus(status.lower())
+            return await item_dao.get_by_status(item_status, workspaces[0].id, skip, limit)
+        except ValueError:
+            # If invalid status is provided, return all items for the space
+            return await item_dao.get_by_space(space, workspaces[0].id, skip, limit)
+    
+    return await item_dao.get_by_space(space, workspaces[0].id, skip, limit)
 
-@item_router.get("/household")
-async def get_household_items(
+# Unified space endpoint that handles all spaces
+@item_router.get("/{space}")
+async def get_items_by_space_name(
+    space: str,
     skip: int = Query(0, description="Skip items"),
     limit: int = Query(100, description="Limit items"),
-    status: Optional[ItemStatus] = None,
+    status: Optional[str] = None,
     user: User = Depends(get_current_user),
     item_dao: ItemDAO = Depends(ItemDAO),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
 ):
-    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
-    if status:
-        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
-    return await item_dao.get_by_space(ItemSpace.HOUSEHOLD, workspaces[0].id, skip, limit)
-
-@item_router.get("/insurance")
-async def get_insurance_items(
-    skip: int = Query(0, description="Skip items"),
-    limit: int = Query(100, description="Limit items"),
-    status: Optional[ItemStatus] = None,
-    user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-):
-    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
-    if status:
-        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
-    return await item_dao.get_by_space(ItemSpace.INSURANCE, workspaces[0].id, skip, limit)
-
-@item_router.get("/pets")
-async def get_pet_items(
-    skip: int = Query(0, description="Skip items"),
-    limit: int = Query(100, description="Limit items"),
-    status: Optional[ItemStatus] = None,
-    user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-):
-    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
-    if status:
-        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
-    return await item_dao.get_by_space(ItemSpace.PETS, workspaces[0].id, skip, limit)
-
-@item_router.get("/travel")
-async def get_travel_items(
-    skip: int = Query(0, description="Skip items"),
-    limit: int = Query(100, description="Limit items"),
-    status: Optional[ItemStatus] = None,
-    user: User = Depends(get_current_user),
-    item_dao: ItemDAO = Depends(ItemDAO),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
-):
-    workspaces = await workspace_dao.get_workspaces_by_user_id(user["user_id"])
-    if status:
-        return await item_dao.get_by_status(status, workspaces[0].id, skip, limit)
-    return await item_dao.get_by_space(ItemSpace.TRAVEL, workspaces[0].id, skip, limit)
+    try:
+        # Convert space string to ItemSpace enum using the lowercase value
+        space_enum = ItemSpace(space.lower())
+        return await get_items_by_space(space_enum, status, skip, limit, user, item_dao, workspace_dao)
+    except ValueError:
+        raise HTTPException(status_code=404, detail=f"Invalid space: {space}")
 
 # Related Items Routes
 @item_router.post("/{item_id}/related/{related_id}")
