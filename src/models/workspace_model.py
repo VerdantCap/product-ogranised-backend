@@ -1,6 +1,5 @@
 from sqlalchemy import String, ForeignKey, DateTime 
-from sqlalchemy.orm import Mapped,mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime  
 from base import Base
 from enums import ItemSpace
@@ -15,7 +14,6 @@ class Workspace(Base):
     cancelled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)  
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     stripe_id: Mapped[str] = mapped_column(String, nullable=False) 
-    spaces_order: Mapped[list]= mapped_column(JSONB)  # Using JSON to store arrays  
     billing_plan: Mapped[str] = mapped_column(String, nullable=False)
 
     users = relationship(
@@ -28,6 +26,7 @@ class Workspace(Base):
     activities = relationship("Activity", back_populates="workspace")
     folders = relationship("Folder", back_populates="workspace")
     files = relationship("File", back_populates="workspace")
+    spaces = relationship("Space", back_populates="workspace")
     
     def has_active_subscription(self) -> bool:
         """
@@ -39,12 +38,16 @@ class Workspace(Base):
             return True
         return self.expires_at > datetime.now()
     
-    def enabled_spaces_ordered(self) -> List[str]:
+    def enabled_spaces(self) -> List[str]:
         """
-        Get the list of enabled spaces in the workspace, in order.
+        Get the list of enabled spaces in the workspace.
         
-        Returns a list of space names.
+        Returns a list of enabled space names.
         """
-        if not self.spaces_order or not isinstance(self.spaces_order, list):
-            return []
-        return self.spaces_order
+        from sqlalchemy import select
+        from sqlalchemy.orm import Session
+        from models.space_model import Space
+        
+        # This is a placeholder. In actual implementation, this would query the spaces table
+        # to get all enabled spaces for this workspace
+        return [space.spacetype for space in self.spaces if space.status]

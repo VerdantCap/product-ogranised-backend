@@ -10,6 +10,7 @@ from models.transport_model import Transport
 from models.workspace_model import Workspace
 from models.activity_model import Activity
 from models.folder_model import Folder
+from models.space_model import Space
 
 __all__ = [
     "Base",
@@ -23,5 +24,6 @@ __all__ = [
     "Transport",
     "Workspace",
     "Activity",
-    "Folder"
+    "Folder",
+    "Space"
 ]

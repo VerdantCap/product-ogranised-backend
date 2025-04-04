@@ -5,11 +5,13 @@ from fastapi import HTTPException, Depends, Path, Body
 from fastapi.responses import RedirectResponse
 from models.user_model import User
 from models.workspace_model import Workspace
+from models.space_model import Space
 from services.auth_service import get_current_user
 from utils.route import APIRouter
 from schemas import WorkspaceCreate, WorkspaceUpdate, WorkspaceMemberRoleUpdate
 from daos.workspace_dao import WorkspaceDAO
 from daos.auth_dao import AuthDAO
+from daos.space_dao import SpaceDAO
 from services.stripe_service import StripeService
 from enums import ItemSpace, WorkspaceRole
 from datetime import datetime
@@ -26,7 +28,8 @@ async def create_workspace(
     user: User = Depends(get_current_user),
     workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
     stripe_service: StripeService = Depends(StripeService),
-    auth_dao: AuthDAO = Depends(AuthDAO)
+    auth_dao: AuthDAO = Depends(AuthDAO),
+    space_dao: SpaceDAO = Depends(SpaceDAO)
     ):  
     """
     Create a new workspace.
@@ -44,12 +47,25 @@ async def create_workspace(
         name=data.name,
         owner_id=data.user_id,
         stripe_id=session.id,
-        spaces_order=data.spaces_order,
         billing_plan=data.plan
     )
     
     # Save workspace to database and get refreshed instance
     workspace = await workspace_dao.create_workspace(workspace)
+    
+    # Create default spaces for the workspace
+    default_spaces = ['insurance', 'household', 'finance', 'pets', 'travel', 'vehicles']
+    for space_type in default_spaces:
+        space_id = f"space_{str(uuid.uuid4())}"
+        from models.space_model import Space
+        space = Space(
+            id=space_id,
+            spacetype=space_type,
+            workspace_id=workspace.id,
+            user_id=data.user_id,
+            status=True  # Enable all spaces by default
+        )
+        await space_dao.create_space(space)
 
     # Get actual User object and join workspace
     db_user = await auth_dao.get_user_by_id(user["user_id"])
@@ -107,17 +123,6 @@ async def update_workspace(
     # Update fields if provided
     if workspace_up.name is not None:
         workspace.name = workspace_up.name
-    if workspace_up.spaces_order is not None:
-        # The WorkspaceUpdate schema should already validate that spaces_order contains valid ItemSpace values
-        # But we'll add an extra check here just to be safe
-        valid_spaces = [space.value for space in ItemSpace]
-        for space in workspace_up.spaces_order:
-            if space not in valid_spaces:
-                raise HTTPException(
-                    status_code=422, 
-                    detail=f"Invalid space value: {space}. Valid values are: {', '.join(valid_spaces)}"
-                )
-        workspace.spaces_order = workspace_up.spaces_order
     if workspace_up.cancelled_at is not None:
         workspace.cancelled_at = workspace_up.cancelled_at
     if workspace_up.expires_at is not None:
@@ -181,11 +186,33 @@ async def get_workspace(
     
     return workspace
 
+@workspace_router.get("/{workspace_id}/spaces")
+async def get_workspace_spaces(
+    workspace_id: str,
+    user: User = Depends(get_current_user),
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+    space_dao: SpaceDAO = Depends(SpaceDAO)
+    ):
+    """
+    Get workspace spaces.
+
+    This function retrieves the enabled spaces for a workspace based on the provided workspace ID.
+
+    Returns the enabled spaces in the workspace.
+    """
+    workspace = await workspace_dao.get_workspace_by_id(workspace_id)
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    enabled_spaces = await space_dao.get_enabled_spaces(workspace_id, user["user_id"])
+    return {"enabled_spaces": enabled_spaces}
+
 @workspace_router.get("/{workspace_id}/refresh-spaces")
 async def refresh_spaces(
     workspace_id: str,
     user: User = Depends(get_current_user),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+    space_dao: SpaceDAO = Depends(SpaceDAO)
     ):
     """
     Refresh workspace spaces.
@@ -196,7 +223,8 @@ async def refresh_spaces(
     """
     workspace = await workspace_dao.get_workspace_by_id(workspace_id)
     if workspace.owner_id == user["user_id"]:
-        return {"enabled_spaces": workspace.enabled_spaces_ordered()}
+        enabled_spaces = await space_dao.get_enabled_spaces(workspace_id, user["user_id"])
+        return {"enabled_spaces": enabled_spaces}
     else:
         raise HTTPException(status_code=404, detail="Workspace not found")
     
@@ -205,12 +233,13 @@ async def update_item_space_order(
     workspace_id: str,
     order: list,
     user: User = Depends(get_current_user),
-    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO)
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+    space_dao: SpaceDAO = Depends(SpaceDAO)
     ): 
     """
-    Update item space order.
+    Update enabled spaces.
 
-    This function updates the order of item spaces in a workspace based on the provided workspace ID and order.
+    This function updates the list of enabled spaces in a workspace based on the provided workspace ID and list.
 
     Returns a message indicating success and the updated enabled spaces.
     """
@@ -218,7 +247,7 @@ async def update_item_space_order(
     if not workspace or workspace.owner_id != user["user_id"]:
         raise HTTPException(status_code=404, detail="Workspace not found")
     
-    # Validate that all items in the order list are valid ItemSpace enum values
+    # Validate that all items in the list are valid ItemSpace enum values
     valid_spaces = [space.value for space in ItemSpace]
     for space in order:
         if space not in valid_spaces:
@@ -227,20 +256,33 @@ async def update_item_space_order(
                 detail=f"Invalid space value: {space}. Valid values are: {', '.join(valid_spaces)}"
             )
     
-    workspace = await workspace_dao.set_spaces(workspace, order)
-    return {"message": "Success", "enabled_spaces": workspace.enabled_spaces_ordered()}
+    workspace = await workspace_dao.set_spaces(workspace, order, user["user_id"])
+    enabled_spaces = await space_dao.get_enabled_spaces(workspace_id, user["user_id"])
+    return {"message": "Success", "enabled_spaces": enabled_spaces}
 
 @workspace_router.post("/{workspace_id}/spaces/{space}")
 async def toggle_space(
     workspace_id: str,
     space: ItemSpace,
     user: User = Depends(get_current_user),
-    workspace_dao : WorkspaceDAO = Depends(WorkspaceDAO)
+    workspace_dao: WorkspaceDAO = Depends(WorkspaceDAO),
+    space_dao: SpaceDAO = Depends(SpaceDAO)
     ):
     workspace = await workspace_dao.get_workspace_by_id(workspace_id)
     if not workspace or workspace.owner_id != user["user_id"]:
         raise HTTPException(status_code=404, detail="Workspace not found")
-    return await workspace_dao.toggle_space(workspace, space)
+    
+    # Toggle the space and get the updated workspace
+    updated_workspace = await workspace_dao.toggle_space(workspace, space, user["user_id"])
+    
+    # Get the enabled spaces
+    enabled_spaces = await space_dao.get_enabled_spaces(workspace_id, user["user_id"])
+    
+    # Return the data in the format expected by the frontend
+    return {
+        "message": "Space toggled successfully",
+        "enabled_spaces": enabled_spaces
+    }
 
 @workspace_router.post("/{workspace_id}/subscription/maintain")
 async def maintain_subscription(

@@ -1,14 +1,17 @@
 import logging
+import uuid
 from fastapi import Depends, HTTPException
 from typing import Optional, List, Dict, Any, Tuple
 from models.workspace_model import Workspace
 from models.user_model import User
+from models.space_model import Space
 from models.association_tables import user_workspace
 from sqlalchemy import or_, select, update, delete, join
 from sqlalchemy.orm import joinedload
 from db.postgres import AsyncSession, get_postgres_session
 from datetime import datetime
-from enums import WorkspaceRole
+from enums import WorkspaceRole, ItemSpace
+from daos.space_dao import SpaceDAO
 
 # Set up a logger for the WorkspaceDAO
 logger = logging.getLogger(__name__)
@@ -23,9 +26,11 @@ class WorkspaceDAO:
     def __init__(
         self,
         db: AsyncSession = Depends(get_postgres_session),
+        space_dao: SpaceDAO = Depends(SpaceDAO),
     ):
         # Initialize the DAO with a database session
         self.db = db
+        self.space_dao = space_dao
 
     async def create_workspace(self, workspace: Workspace) -> Workspace:  
         """
@@ -133,40 +138,73 @@ class WorkspaceDAO:
         await self.db.refresh(workspace)
         return workspace
 
-    async def set_spaces(self, workspace: Workspace, selected_spaces: list) -> Workspace: 
+    async def set_spaces(self, workspace: Workspace, selected_spaces: list, user_id: str) -> Workspace: 
         """
-        Set the order of spaces in a workspace.
+        Set the enabled spaces in a workspace.
 
-        Updates the spaces_order field in the database.
+        Updates the spaces in the database for the given workspace and user.
         Returns the updated Workspace object.
         """
-        workspace.spaces_order = selected_spaces
-        await self.db.commit()
+        # Get all existing spaces for this workspace and user
+        existing_spaces = await self.space_dao.get_spaces_by_workspace_and_user(workspace.id, user_id)
+        existing_space_types = {space.spacetype: space for space in existing_spaces}
+        
+        # For each space type in the selected spaces
+        for space_type in selected_spaces:
+            if space_type in existing_space_types:
+                # If the space exists but is not enabled, enable it
+                space = existing_space_types[space_type]
+                if not space.status:
+                    space.status = True
+                    await self.space_dao.update_space(space)
+            else:
+                # If the space doesn't exist, create it
+                space_id = f"space_{str(uuid.uuid4())}"
+                new_space = Space(
+                    id=space_id,
+                    spacetype=space_type,
+                    workspace_id=workspace.id,
+                    user_id=user_id,
+                    status=True
+                )
+                await self.space_dao.create_space(new_space)
+        
+        # For each existing space not in the selected spaces, disable it
+        for space_type, space in existing_space_types.items():
+            if space_type not in selected_spaces and space.status:
+                space.status = False
+                await self.space_dao.update_space(space)
+        
         await self.db.refresh(workspace)
         return workspace
 
-    async def toggle_space(self, workspace: Workspace, space_value: str) -> Workspace:
+    async def toggle_space(self, workspace: Workspace, space_value: str, user_id: str) -> Workspace:
         """
-        Toggle a space in a workspace's space order.
+        Toggle a space for a workspace and user.
 
         Returns the updated Workspace object.
         """
         # Ensure space_value is a valid ItemSpace value
-        from enums import ItemSpace
-        valid_spaces = [space.value for space in ItemSpace]
-        if space_value not in valid_spaces:
-            raise HTTPException(
-                status_code=422, 
-                detail=f"Invalid space value: {space_value}. Valid values are: {', '.join(valid_spaces)}"
-            )
-            
-        spaces_order = workspace.spaces_order
-        if space_value in spaces_order:
-            spaces_order.remove(space_value)
-        else:
-            spaces_order.append(space_value)
-        workspace.spaces_order = spaces_order
-        await self.db.commit()
+        # Handle both enum name (INSURANCE) and enum value (insurance)
+        # First, try to find the enum by name
+        try:
+            # If space_value is an enum name (e.g., INSURANCE), get the corresponding value (e.g., insurance)
+            space_enum = ItemSpace[space_value]
+            space_value_lower = space_enum.value
+        except KeyError:
+            # If space_value is not an enum name, check if it's a valid enum value
+            valid_spaces = [space.value for space in ItemSpace]
+            if space_value.lower() in valid_spaces:
+                space_value_lower = space_value.lower()
+            else:
+                raise HTTPException(
+                    status_code=422, 
+                    detail=f"Invalid space value: {space_value}. Valid values are: {', '.join(valid_spaces)}"
+                )
+        
+        # Create or toggle the space
+        await self.space_dao.create_or_toggle_space(space_value_lower, workspace.id, user_id)
+        
         await self.db.refresh(workspace)
         return workspace
 
@@ -317,12 +355,9 @@ class WorkspaceDAO:
             )
         
         # Remove the user from the workspace
-        delete_query = (
-            delete(user_workspace)
-            .where(
-                (user_workspace.c.workspace_id == workspace_id) & 
-                (user_workspace.c.user_id == user_id)
-            )
+        delete_query = delete(user_workspace).where(
+            (user_workspace.c.workspace_id == workspace_id) & 
+            (user_workspace.c.user_id == user_id)
         )
         await self.db.execute(delete_query)
         await self.db.commit()

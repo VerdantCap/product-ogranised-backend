@@ -53,6 +53,7 @@ class User(Base):
     folders = relationship("Folder", back_populates="owner")
     items = relationship("Item", back_populates="owner")
     activities = relationship("Activity", back_populates="user")
+    spaces = relationship("Space", back_populates="user")
 
     @hybrid_property
     def is_oauthed(self) -> bool:
