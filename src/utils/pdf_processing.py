@@ -7,19 +7,18 @@ import io
 import os
 import re
 from typing import Dict, List, Optional, Tuple, Union, Any
-from datetime import datetime
 
 # pdfminer.six imports for reading and analyzing
 from pdfminer.high_level import extract_text, extract_pages
-# PyPDF2 imports for editing
-from PyPDF2 import PdfReader, PdfWriter, PdfMerger
-from PyPDF2.generic import NameObject, createStringObject, DictionaryObject
-from pdfminer.layout import LAParams, LTTextContainer, LTChar, LTPage, LTFigure, LTImage
+# PyPDF4 imports for editing
+from PyPDF4 import PdfReader, PdfWriter, PdfMerger
+from PyPDF4.generic import NameObject, createStringObject, DictionaryObject
+from pdfminer.layout import LAParams, LTTextContainer, LTFigure, LTImage
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import resolve1
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.converter import TextConverter, PDFPageAggregator
+from pdfminer.converter import PDFPageAggregator
 from pdfminer.pdfpage import PDFPage
 
 

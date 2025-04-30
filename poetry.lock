@@ -1966,6 +1966,17 @@ docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
 tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
+name = "pypdf4"
+version = "1.27.0"
+description = "PDF toolkit"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "PyPDF4-1.27.0.tar.gz", hash = "sha256:7c932441146d205572f96254d53c79ea2c30c9e11df55a5cf87e056c7b3d7f89"},
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
@@ -2825,4 +2836,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "9e1498af62a3bb0d483dad815212844da48db2b1b010cb0ded31b92d00c9d8c2"
+content-hash = "697297c8770dd324e489981284bd4509223848d9e6c0cdcd4f52edac3d2f312a"
